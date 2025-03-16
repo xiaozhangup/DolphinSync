@@ -66,7 +66,7 @@ class DolphinAchievementSource : JsonDataSource {
                 cancel()
                 return@submitScope
             }
-            if (tried > 240) { // 给他 1.2s 时间
+            if (tried > DolphinSync.settings.maxTried) { // 给他 1.2s 时间
                 future.complete(
                     tablePlayerAdvancement.getData(uuid, false) // 强制读取
                 )
@@ -77,6 +77,7 @@ class DolphinAchievementSource : JsonDataSource {
             val data = tablePlayerAdvancement.getData(uuid) // 尝试读取
             if (data != null) { // 非空就完成处理
                 future.complete(data)
+                debug("[Sync] [Achievement] $uuid loaded (tried $tried times)")
                 cancel()
                 return@submitScope
             } else {
@@ -103,6 +104,10 @@ class DolphinAchievementSource : JsonDataSource {
             future.complete(
                 tablePlayerAdvancement.getData(uuid, false)
             )
+        }
+
+        fun addQuitedPlayer(uuid: String) {
+            quitedPlayers.add(uuid)
         }
     }
 }

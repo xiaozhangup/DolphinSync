@@ -3,7 +3,8 @@ package me.xiaozhangup.dolphin.utils
 import kotlinx.coroutines.*
 
 object CoroutineTask {
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    var forceSync = false
 
     fun submit(period: Long = 0L, delay: Long = 0L, block: suspend TaskScope.() -> Unit): Job {
         val job = scope.launch {
@@ -20,18 +21,19 @@ object CoroutineTask {
         }
         return job
     }
-
-    fun Job.cancelTask() {
-        this.cancel()
-    }
 }
 
 class TaskScope(private val job: CoroutineScope) {
     fun cancel() {
         job.cancel()
     }
+
 }
 
 fun submitScope(period: Long = 0L, delay: Long = 0L, block: suspend TaskScope.() -> Unit): Job {
+    if (CoroutineTask.forceSync) {
+        runBlocking { block(TaskScope(this)) }
+        return Job().apply { complete() }
+    }
     return CoroutineTask.submit(period, delay, block)
 }

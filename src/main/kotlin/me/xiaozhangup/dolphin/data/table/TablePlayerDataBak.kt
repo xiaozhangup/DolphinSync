@@ -9,7 +9,7 @@ class TablePlayerDataBak : SQLTable {
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_data_bak", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {
-                options(ColumnOptionSQL.PRIMARY_KEY)
+                options(ColumnOptionSQL.KEY)
             }
         }
 

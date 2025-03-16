@@ -1,5 +1,6 @@
 package me.xiaozhangup.dolphin.source
 
+import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.redis.RedisHandle
@@ -72,7 +73,7 @@ class DolphinDataSource : ProfileSource {
                 cancel()
                 return@submitScope
             }
-            if (tried > 240) { // 给他 1.2s 时间
+            if (tried > DolphinSync.settings.maxTried) { // 给他 1.2s 时间
                 future.complete(
                     tablePlayerData.getData(uuid, false) // 强制读取
                 )
@@ -83,6 +84,7 @@ class DolphinDataSource : ProfileSource {
             val data = tablePlayerData.getData(uuid) // 尝试读取
             if (data != null) { // 非空就完成处理
                 future.complete(data)
+                debug("[Sync] [Data] $uuid loaded (tried $tried times)")
                 cancel()
                 return@submitScope
             } else {
