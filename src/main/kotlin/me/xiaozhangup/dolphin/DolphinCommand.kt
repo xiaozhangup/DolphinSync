@@ -4,16 +4,14 @@ import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerStatisticMigrate
 import me.xiaozhangup.dolphin.utils.notify
-import me.xiaozhangup.dolphin.utils.submitVirtual
+import me.xiaozhangup.dolphin.utils.submitScope
 import org.bukkit.command.CommandSender
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.command.PermissionDefault
 import taboolib.common.platform.command.command
-import taboolib.common.platform.function.submit
-import taboolib.common.platform.function.submitAsync
+import taboolib.expansion.chain
 import taboolib.expansion.createHelper
-import taboolib.expansion.submitChain
 
 object DolphinCommand {
     @Awake(LifeCycle.ENABLE)
@@ -30,7 +28,7 @@ object DolphinCommand {
                 literal("data") {
                     execute<CommandSender> { sender, _, _ ->
                         sender.notify("正在迁移玩家基本数据...")
-                        submitVirtual {
+                        submitScope {
                             PlayerDataMigrate.migrate(sender)
                         }
                     }
@@ -38,13 +36,19 @@ object DolphinCommand {
 
                 literal("achievement") {
                     execute<CommandSender> { sender, _, _ ->
-                        PlayerAchievementMigrate.migrate(sender)
+                        sender.notify("正在迁移玩家进度数据...")
+                        submitScope {
+                            PlayerAchievementMigrate.migrate(sender)
+                        }
                     }
                 }
 
                 literal("statistic") {
                     execute<CommandSender> { sender, _, _ ->
-                        PlayerStatisticMigrate.migrate(sender)
+                        sender.notify("正在迁移玩家统计数据...")
+                        submitScope {
+                            PlayerStatisticMigrate.migrate(sender)
+                        }
                     }
                 }
 

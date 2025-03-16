@@ -5,16 +5,15 @@ import org.bukkit.entity.Player
 import java.util.Optional
 
 class DolphinDataSource : ProfileSource {
-    override fun save(p0: Player, p1: ByteArray): Boolean {
-        p0.isConnected
+    override fun save(player: Player, byte: ByteArray): Boolean {
         TODO("Not yet implemented")
     }
 
-    override fun load(p0: Player): Optional<ByteArray> {
+    override fun load(player: Player): Optional<ByteArray> {
         TODO("Not yet implemented")
     }
 
-    override fun load(p0: String, p1: String): Optional<ByteArray> {
+    override fun load(player: String, username: String): Optional<ByteArray> {
         TODO("Not yet implemented")
     }
 }
