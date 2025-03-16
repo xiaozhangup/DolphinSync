@@ -8,6 +8,7 @@ import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.info
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.Configuration
+import taboolib.platform.BukkitPlugin
 
 object DolphinSync : Plugin() {
 
@@ -15,6 +16,7 @@ object DolphinSync : Plugin() {
     lateinit var config: Configuration
         private set
     lateinit var settings: DolphinSettings
+    val plugin: BukkitPlugin by lazy { BukkitPlugin.getInstance() }
 
     override fun onEnable() {
         settings = DolphinSettings(config.getConfigurationSection("settings")!!)
