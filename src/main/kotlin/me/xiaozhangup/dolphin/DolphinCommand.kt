@@ -10,7 +10,6 @@ import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.command.PermissionDefault
 import taboolib.common.platform.command.command
-import taboolib.expansion.chain
 import taboolib.expansion.createHelper
 
 object DolphinCommand {

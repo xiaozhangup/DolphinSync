@@ -5,7 +5,7 @@ import me.xiaozhangup.dolphin.utils.notify
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import java.io.File
-import java.util.UUID
+import java.util.*
 
 object PlayerDataMigrate {
     fun migrate(sender: CommandSender?) {
@@ -33,7 +33,7 @@ object PlayerDataMigrate {
                     total++
                 } catch (e: Throwable) {
                     e.printStackTrace()
-                    sender?.notify("迁移 {0} 失败, 因为 {1}", file.name,  e.message ?: "请查看控制台")
+                    sender?.notify("迁移 {0} 失败, 因为 {1}", file.name, e.message ?: "请查看控制台")
                     failure++
                 }
             }

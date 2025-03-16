@@ -1,11 +1,6 @@
 package me.xiaozhangup.dolphin.utils
 
-import ink.pmc.advkt.component.component
-import ink.pmc.advkt.component.darkGray
-import ink.pmc.advkt.component.hex
-import ink.pmc.advkt.component.miniMessage
-import ink.pmc.advkt.component.raw
-import ink.pmc.advkt.component.text
+import ink.pmc.advkt.component.*
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import taboolib.common.util.replaceWithOrder
@@ -23,7 +18,11 @@ fun CommandSender.notify(message: String, vararg placeholder: Any) {
         component {
             raw(DolphinMessage.PREFIX)
             text(" ")
-            miniMessage("<color:#bcdeea>${message.replaceWithOrder(*placeholder.map { "<color:#e4f2f7>$it</color>" }.toTypedArray())}</color>")
+            miniMessage(
+                "<color:#bcdeea>${
+                    message.replaceWithOrder(*placeholder.map { "<color:#e4f2f7>$it</color>" }.toTypedArray())
+                }</color>"
+            )
         }
     )
 }
