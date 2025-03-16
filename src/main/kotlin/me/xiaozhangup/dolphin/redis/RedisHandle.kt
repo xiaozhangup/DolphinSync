@@ -1,8 +1,11 @@
 package me.xiaozhangup.dolphin.redis
 
 import me.xiaozhangup.dolphin.DolphinSync
+import me.xiaozhangup.dolphin.source.DolphinAchievementSource
+import me.xiaozhangup.dolphin.source.DolphinStatisticSource
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.common.platform.function.debug
 import taboolib.common.platform.function.info
 import taboolib.expansion.AlkaidRedis
 import taboolib.expansion.SingleRedisConnector
@@ -19,7 +22,19 @@ object RedisHandle {
     fun initAlkaidRedis() {
         redisConnection.connection().apply {
             subscribe(CHANNEL, patternMode = false) {
-                info(message)
+                debug("[AlkaidRedis] Redis received message: $message")
+                val (type, uuid) = message.split(':', limit =  2)
+                when(type) {
+                    "achievement" -> {
+                        DolphinAchievementSource.completeIfNeeded(uuid)
+                    }
+                    "data" -> {
+
+                    }
+                    "statistic" -> {
+                        DolphinStatisticSource.completeIfNeeded(uuid)
+                    }
+                }
             }
         }
         info("[AlkaidRedis] Redis connected")

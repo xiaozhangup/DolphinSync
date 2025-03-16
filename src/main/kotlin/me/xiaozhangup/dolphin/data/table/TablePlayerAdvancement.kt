@@ -45,10 +45,6 @@ class TablePlayerAdvancement : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
-        if (!hasData(uuid)) {
-            insert(uuid, currentTimeMillis(), !unlock, data)
-            return
-        }
         table.update(dataSource) {
             where("uuid" eq uuid)
 
