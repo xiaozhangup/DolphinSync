@@ -31,10 +31,12 @@ class TablePlayerAdvancement : SQLTable {
             dataSource,
             "uuid", "modified", "lock", "data"
         ) {
-            value(uuid)
-            value(modified)
-            value(if (lock) currentTimeMillis() else 0)
-            value(data)
+            value(
+                uuid,
+                modified,
+                if (lock) currentTimeMillis() else 0,
+                data
+            )
         }
     }
 

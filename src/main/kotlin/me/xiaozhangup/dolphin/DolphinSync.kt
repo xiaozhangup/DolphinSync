@@ -1,5 +1,7 @@
 package me.xiaozhangup.dolphin
 
+import me.xiaozhangup.dolphin.data.DatabaseContainer
+import me.xiaozhangup.dolphin.redis.RedisHandle
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
 import me.xiaozhangup.dolphin.source.DolphinDataSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
@@ -21,6 +23,9 @@ object DolphinSync : Plugin() {
     override fun onEnable() {
         settings = DolphinSettings(config.getConfigurationSection("settings")!!)
         info("[Config] Loaded! $settings")
+
+        DatabaseContainer.initContainer()
+        RedisHandle.initAlkaidRedis()
 
         if (settings.syncData) {
             Bukkit.getServer().setProfileSource(DolphinDataSource())

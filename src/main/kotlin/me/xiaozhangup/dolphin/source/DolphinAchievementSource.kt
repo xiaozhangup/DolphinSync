@@ -13,7 +13,7 @@ class DolphinAchievementSource : JsonDataSource {
 
     init {
         Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
-        Bukkit.getConsoleSender().notify("DolphinAchievementSource 已启用")
+        notify("DolphinAchievementSource 已启用")
     }
 
     override fun save(json: String, uuid: String) {

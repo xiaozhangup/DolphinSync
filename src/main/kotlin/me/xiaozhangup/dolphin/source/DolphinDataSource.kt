@@ -9,7 +9,7 @@ import java.util.*
 class DolphinDataSource : ProfileSource {
 
     init {
-        Bukkit.getConsoleSender().notify("DolphinDataSource 已启用")
+        notify("DolphinDataSource 已启用")
     }
 
     override fun save(player: Player, byte: ByteArray): Boolean {

@@ -16,8 +16,7 @@ object RedisHandle {
             .connect()
     }
 
-    @Awake(LifeCycle.ENABLE)
-    fun init() {
+    fun initAlkaidRedis() {
         redisConnection.connection().apply {
             subscribe(CHANNEL, patternMode = false) {
                 info(message)

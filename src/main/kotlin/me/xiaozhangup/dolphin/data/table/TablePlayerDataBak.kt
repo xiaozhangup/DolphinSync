@@ -27,9 +27,11 @@ class TablePlayerDataBak : SQLTable {
             dataSource,
             "uuid", "modified", "data"
         ) {
-            value(uuid)
-            value(currentTimeMillis())
-            value(data)
+            value(
+                uuid,
+                currentTimeMillis(),
+                data
+            )
         }
     }
 }

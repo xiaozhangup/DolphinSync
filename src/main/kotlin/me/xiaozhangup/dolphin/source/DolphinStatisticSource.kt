@@ -17,7 +17,7 @@ class DolphinStatisticSource : JsonDataSource {
 
     init {
         Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
-        Bukkit.getConsoleSender().notify("DolphinStatisticSource 已启用")
+        notify("DolphinStatisticSource 已启用")
     }
 
     override fun save(json: String, uuid: String) {

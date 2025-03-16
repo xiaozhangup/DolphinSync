@@ -6,6 +6,7 @@ import ink.pmc.advkt.component.hex
 import ink.pmc.advkt.component.miniMessage
 import ink.pmc.advkt.component.raw
 import ink.pmc.advkt.component.text
+import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import taboolib.common.util.replaceWithOrder
 
@@ -25,4 +26,8 @@ fun CommandSender.notify(message: String, vararg placeholder: Any) {
             miniMessage("<color:#bcdeea>${message.replaceWithOrder(placeholder.map { "<color:#e4f2f7>$it</color>" })}</color>")
         }
     )
+}
+
+fun notify(message: String, vararg placeholder: Any) {
+    Bukkit.getConsoleSender().notify(message, *placeholder)
 }

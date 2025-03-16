@@ -9,12 +9,11 @@ import me.xiaozhangup.dolphin.utils.debug
 import taboolib.common.LifeCycle
 import taboolib.common.env.RuntimeDependencies
 import taboolib.common.env.RuntimeDependency
-import taboolib.common.platform.SkipTo
+import taboolib.common.platform.Awake
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.database.HostSQL
 import javax.sql.DataSource
 
-@SkipTo(LifeCycle.ENABLE)
 @RuntimeDependencies(
     RuntimeDependency(
         value = "mysql:mysql-connector-java:8.0.23",

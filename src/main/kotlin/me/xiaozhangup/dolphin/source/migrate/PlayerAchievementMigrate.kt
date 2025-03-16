@@ -12,6 +12,8 @@ import java.util.UUID
 object PlayerAchievementMigrate {
     fun migrate(sender: CommandSender?) {
         val folder = File(getWorldFolder(), "advancements")
+        var total = 0
+        var failure = 0
         if (folder.isDirectory) {
             for (file in folder.listFiles()) {
                 if (file.extension != "json") continue
@@ -30,10 +32,16 @@ object PlayerAchievementMigrate {
                         false,
                         data
                     )
+                    total++
                 } catch (e: Throwable) {
                     e.printStackTrace()
+                    e.printStackTrace()
+                    sender?.notify("迁移 {0} 失败, 因为 {1}", file.name,  e.message ?: "请查看控制台")
+                    failure++
                 }
             }
+
+            sender?.notify("迁移完成, 共迁移 {0} 个玩家数据, 失败 {1} 个", total, failure)
         } else {
             sender?.notify("没有找到玩家进度文件夹!")
         }
