@@ -26,11 +26,27 @@ class TablePlayerAdvancement : SQLTable {
         }
     }
 
+    fun insert(uuid: String, modified: Long, lock: Boolean = false, data: ByteArray) {
+        table.insert(
+            dataSource,
+            "uuid", "modified", "lock", "data"
+        ) {
+            value(uuid)
+            value(modified)
+            value(if (lock) currentTimeMillis() else 0)
+            value(data)
+        }
+    }
+
     fun saveData(
         uuid: String,
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        if (!hasData(uuid)) {
+            insert(uuid, currentTimeMillis(), !unlock, data)
+            return
+        }
         table.update(dataSource) {
             where("uuid" eq uuid)
 
@@ -47,6 +63,12 @@ class TablePlayerAdvancement : SQLTable {
             where("uuid" eq uuid)
             set("lock", currentTimeMillis())
         }
+    }
+
+    fun hasData(uuid: String): Boolean {
+        return table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {} != null
     }
 
     fun lastModified(uuid: String): Long {

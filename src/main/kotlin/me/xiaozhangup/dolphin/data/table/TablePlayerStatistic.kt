@@ -43,6 +43,10 @@ class TablePlayerStatistic : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        if (!hasData(uuid)) {
+            insert(uuid, currentTimeMillis(), !unlock, data)
+            return
+        }
         table.update(dataSource) {
             where("uuid" eq uuid)
 
@@ -59,6 +63,12 @@ class TablePlayerStatistic : SQLTable {
             where("uuid" eq uuid)
             set("lock", currentTimeMillis())
         }
+    }
+
+    fun hasData(uuid: String): Boolean {
+        return table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {} != null
     }
 
     fun lastModified(uuid: String): Long {

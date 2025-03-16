@@ -49,6 +49,10 @@ class TablePlayerData : SQLTable {
         }
     }
 
+    /**
+     * 此方法仅仅可用于非退出保存
+     * 退出保存必须传入完整的 uuid 和 name
+     */
     fun saveData(
         uuid: String,
         data: ByteArray,
@@ -71,6 +75,10 @@ class TablePlayerData : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        if (!hasData(uuid)) {
+            insert(uuid, name, currentTimeMillis(), !unlock, data)
+            return
+        }
         table.update(dataSource) {
             where {
                 "uuid" eq uuid
@@ -91,6 +99,12 @@ class TablePlayerData : SQLTable {
 
             set("lock", currentTimeMillis())
         }
+    }
+
+    fun hasData(uuid: String): Boolean {
+        return table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {} != null
     }
 
     fun lastModified(uuid: String): Long {
