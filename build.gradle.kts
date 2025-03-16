@@ -30,17 +30,25 @@ taboolib {
 //        skipKotlinRelocate = true
 //        skipKotlin = true
     }
+
+    relocate("ink.pmc.advkt", "me.xiaozhangup.dolphin.lib.advkt")
 }
 
 repositories {
     mavenCentral()
+    mavenLocal()
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://maven.nostal.ink/repository/maven-public/")
 }
 
 dependencies {
-    compileOnly("ink.ptms.core:v12004:12004:mapped")
-    compileOnly("ink.ptms.core:v12004:12004:universal")
+    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("ink.ptms.core:v12104:12104-minimize:mapped")
+    compileOnly("ink.ptms.core:v12104:12104-minimize:universal")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
+
+    taboo("ink.pmc.advkt:core:1.0.1")
 }
 
 tasks.withType<JavaCompile> {
@@ -49,12 +57,12 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "21"
         freeCompilerArgs = listOf("-Xjvm-default=all")
     }
 }
 
 configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
