@@ -27,11 +27,11 @@ class DolphinAchievementSource : JsonDataSource {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
                 tablePlayerAdvancement.saveData(uuid, GzipUtils.compress(json), true) // 存
                 RedisHandle.publish("achievement:$uuid") // 广播
-                debug("[Sync] [Advancement] $uuid saved and unlocked! (in ${timer.pop()}ms)")
+                debug("[Sync] [Advancement] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {
                 tablePlayerAdvancement.saveData(uuid, GzipUtils.compress(json)) // 存
-                debug("[Sync] [Advancement] $uuid saved! (in ${timer.pop()}ms)")
+                debug("[Sync] [Advancement] $uuid saved (in ${timer.pop()}ms)")
             }
         }
     }
@@ -55,15 +55,15 @@ class DolphinAchievementSource : JsonDataSource {
             thenAccept {
                 futureQueues.remove(uuid)
                 tablePlayerAdvancement.lockData(uuid)
-                debug("[Sync] [Advancement] $uuid loaded! (in ${timer.pop()}ms)") // 统计数据
+                debug("[Sync] [Advancement] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
             }
             futureQueues[uuid] = this
         } // 加上对应任务
 
         submitScope(period = 5) {
             if (future.isDone) {
+                debug("[Sync] [Advancement] $uuid loaded in another way (tried $tried times)")
                 cancel()
-                debug("[Sync] [Advancement] $uuid loaded in another way! (tried $tried times)")
                 return@submitScope
             }
             if (tried > 240) { // 给他 1.2s 时间

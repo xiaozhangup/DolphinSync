@@ -117,13 +117,11 @@ class TablePlayerData : SQLTable {
     ): ByteArray? {
         val result = table.select(dataSource) {
             where("uuid" eq uuid)
-        }.firstOrNull {
-            val lock = getLong("lock")
-            if (lock > 0L && nullWhenLocked) {
-                null
-            } else {
-                getBytes("data")
+            if (nullWhenLocked) {
+                where("lock" eq 0)
             }
+        }.firstOrNull {
+            getBytes("data")
         }
 
         return result

@@ -27,11 +27,11 @@ class DolphinStatisticSource : JsonDataSource {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
                 tablePlayerStatistic.saveData(uuid, GzipUtils.compress(json), true) // 存
                 RedisHandle.publish("statistic:$uuid") // 广播
-                debug("[Sync] [Statistic] $uuid saved and unlocked! (in ${timer.pop()}ms)")
+                debug("[Sync] [Statistic] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {
                 tablePlayerStatistic.saveData(uuid, GzipUtils.compress(json)) // 存
-                debug("[Sync] [Statistic] $uuid saved! (in ${timer.pop()}ms)")
+                debug("[Sync] [Statistic] $uuid saved (in ${timer.pop()}ms)")
             }
         }
     }
@@ -55,15 +55,15 @@ class DolphinStatisticSource : JsonDataSource {
             thenAccept {
                 futureQueues.remove(uuid)
                 tablePlayerStatistic.lockData(uuid)
-                debug("[Sync] [Statistic] $uuid loaded! (in ${timer.pop()}ms)") // 统计数据
+                debug("[Sync] [Statistic] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
             }
             futureQueues[uuid] = this
         } // 加上对应任务
 
         submitScope(period = 5) {
             if (future.isDone) {
+                debug("[Sync] [Statistic] $uuid loaded in another way (tried $tried times)")
                 cancel()
-                debug("[Sync] [Statistic] $uuid loaded in another way! (tried $tried times)")
                 return@submitScope
             }
             if (tried > 240) { // 给他 1.2s 时间
