@@ -23,7 +23,7 @@ fun CommandSender.notify(message: String, vararg placeholder: Any) {
         component {
             raw(DolphinMessage.PREFIX)
             text(" ")
-            miniMessage("<color:#bcdeea>${message.replaceWithOrder(placeholder.map { "<color:#e4f2f7>$it</color>" })}</color>")
+            miniMessage("<color:#bcdeea>${message.replaceWithOrder(*placeholder.map { "<color:#e4f2f7>$it</color>" }.toTypedArray())}</color>")
         }
     )
 }

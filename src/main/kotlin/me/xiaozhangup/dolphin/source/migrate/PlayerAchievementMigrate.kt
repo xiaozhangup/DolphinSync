@@ -36,7 +36,7 @@ object PlayerAchievementMigrate {
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     e.printStackTrace()
-                    sender?.notify("迁移 {0} 失败, 因为 {1}", file.name,  e.message ?: "请查看控制台")
+                    sender?.notify("迁移 {0} 失败, 因为 {1}", file.name, e.message ?: "请查看控制台")
                     failure++
                 }
             }
