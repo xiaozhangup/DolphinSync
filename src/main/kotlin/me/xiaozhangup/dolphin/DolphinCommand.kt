@@ -24,6 +24,13 @@ object DolphinCommand {
                 }
             }
 
+            literal("debug") {
+                execute<CommandSender> { sender, _, _ ->
+                    DolphinSync.settings.debug = !DolphinSync.settings.debug
+                    sender.notify("调试模式已切换为 {0}", DolphinSync.settings.debug)
+                }
+            }
+
             literal("migrate") {
                 literal("data") {
                     execute<CommandSender> { sender, _, _ ->

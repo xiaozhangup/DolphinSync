@@ -3,7 +3,7 @@ package me.xiaozhangup.dolphin
 import taboolib.library.configuration.ConfigurationSection
 
 data class DolphinSettings(
-    val debug: Boolean,
+    var debug: Boolean,
     val syncData: Boolean,
     val syncAchievement: Boolean,
     val syncStatistic: Boolean
