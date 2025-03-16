@@ -21,16 +21,25 @@ object PlayerAchievementMigrate {
                     val modified = file.lastModified()
 
                     val data = GzipUtils.compress(file.readText())
-                    if (DatabaseContainer.tablePlayerAdvancement.lastModified(uuid.toString()) >= modified) {
+                    val uid = uuid.toString()
+                    if (DatabaseContainer.tablePlayerAdvancement.lastModified(uid) >= modified) {
                         sender?.notify("跳过 {0} 因为已经迁移过了", file.name)
                         continue
                     }
-                    DatabaseContainer.tablePlayerAdvancement.insert(
-                        uuid.toString(),
-                        modified,
-                        false,
-                        data
-                    )
+                    if (DatabaseContainer.tablePlayerAdvancement.hasData(uid)) {
+                        DatabaseContainer.tablePlayerAdvancement.saveData(
+                            uid,
+                            data,
+                            true
+                        )
+                    } else {
+                        DatabaseContainer.tablePlayerAdvancement.insert(
+                            uid,
+                            modified,
+                            false,
+                            data
+                        )
+                    }
                     total++
                 } catch (e: Throwable) {
                     e.printStackTrace()

@@ -25,12 +25,20 @@ object PlayerStatisticMigrate {
                         sender?.notify("跳过 {0} 因为已经迁移过了", file.name)
                         continue
                     }
-                    DatabaseContainer.tablePlayerStatistic.insert(
-                        uuid.toString(),
-                        modified,
-                        false,
-                        data
-                    )
+                    if (DatabaseContainer.tablePlayerStatistic.hasData(uuid.toString())) {
+                        DatabaseContainer.tablePlayerStatistic.saveData(
+                            uuid.toString(),
+                            data,
+                            true
+                        )
+                    } else {
+                        DatabaseContainer.tablePlayerStatistic.insert(
+                            uuid.toString(),
+                            modified,
+                            false,
+                            data
+                        )
+                    }
                     total++
                 } catch (e: Throwable) {
                     e.printStackTrace()

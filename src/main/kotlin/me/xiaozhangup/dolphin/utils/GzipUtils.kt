@@ -14,7 +14,10 @@ object GzipUtils {
         return byteArrayOutputStream.toByteArray()
     }
 
-    fun decompress(compressed: ByteArray): String {
+    fun decompress(compressed: ByteArray): String? {
+        if (compressed.isEmpty()) {
+            return null
+        }
         val byteArrayInputStream = ByteArrayInputStream(compressed)
         val gzipInputStream = GZIPInputStream(byteArrayInputStream)
         val byteArrayOutputStream = ByteArrayOutputStream()

@@ -19,17 +19,26 @@ object PlayerDataMigrate {
                     val uuid = UUID.fromString(file.nameWithoutExtension)
                     val modified = file.lastModified()
 
-                    if (DatabaseContainer.tablePlayerData.lastModified(uuid.toString()) >= modified) {
+                    val uid = uuid.toString()
+                    if (DatabaseContainer.tablePlayerData.lastModified(uid) >= modified) {
                         sender?.notify("跳过 {0} 因为已经迁移过了", file.name)
                         continue
                     }
-                    DatabaseContainer.tablePlayerData.insert(
-                        uuid.toString(),
-                        Bukkit.getOfflinePlayer(uuid).name ?: "null",
-                        modified,
-                        false,
-                        file.readBytes()
-                    )
+                    if (DatabaseContainer.tablePlayerData.hasData(uid)) {
+                        DatabaseContainer.tablePlayerData.saveData(
+                            uid,
+                            file.readBytes(),
+                            true
+                        )
+                    } else {
+                        DatabaseContainer.tablePlayerData.insert(
+                            uid,
+                            Bukkit.getOfflinePlayer(uuid).name ?: "null",
+                            modified,
+                            false,
+                            file.readBytes()
+                        )
+                    }
                     total++
                 } catch (e: Throwable) {
                     e.printStackTrace()
