@@ -26,15 +26,26 @@ class TablePlayerAdvancement : SQLTable {
         }
     }
 
-    fun insert(uuid: String, modified: Long, lock: Boolean = false, data: ByteArray) {
-        table.insert(
-            dataSource,
-            "uuid", "modified", "lock", "data"
-        ) {
-            value(uuid)
-            value(modified)
-            value(if (lock) currentTimeMillis() else 0)
-            value(data)
+    fun saveData(
+        uuid: String,
+        data: ByteArray,
+        unlock: Boolean = false
+    ) {
+        table.update(dataSource) {
+            where("uuid" eq uuid)
+
+            set("data", data)
+            set("modified", currentTimeMillis())
+            if (unlock) {
+                set("lock", 0)
+            }
+        }
+    }
+
+    fun lockData(uuid: String) {
+        table.update(dataSource) {
+            where("uuid" eq uuid)
+            set("lock", currentTimeMillis())
         }
     }
 
@@ -42,5 +53,23 @@ class TablePlayerAdvancement : SQLTable {
         return table.select(dataSource) {
             where("uuid" eq uuid)
         }.firstOrNull { getLong("modified") } ?: -1
+    }
+
+    fun getData(
+        uuid: String,
+        nullWhenLocked: Boolean = true
+    ): ByteArray? {
+        val result = table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {
+            val lock = getLong("lock")
+            if (lock > 0L && nullWhenLocked) {
+                null
+            } else {
+                getBytes("data")
+            }
+        }
+
+        return result
     }
 }
