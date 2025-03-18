@@ -17,6 +17,7 @@ settings:
   debug: false
   max_tried: 140
   kick_when_shutdown: true
+  backup: true
   sync:
     data: false
     achievement: false

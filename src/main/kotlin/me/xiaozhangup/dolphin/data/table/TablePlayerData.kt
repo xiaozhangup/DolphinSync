@@ -99,6 +99,14 @@ class TablePlayerData : SQLTable {
         }
     }
 
+    fun isLocked(uuid: String): Boolean {
+        return table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {
+            getLong("lock") > 0
+        } == true
+    }
+
     fun hasData(uuid: String): Boolean {
         return table.select(dataSource) {
             where("uuid" eq uuid)
@@ -147,5 +155,27 @@ class TablePlayerData : SQLTable {
         }
 
         return result
+    }
+
+    fun allNames(): List<String> {
+        return table.select(dataSource) { }.map {
+            getString("name")
+        }
+    }
+
+    fun getNameByUUID(uuid: String): String? {
+        return table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.firstOrNull {
+            getString("name")
+        }
+    }
+
+    fun getUUIDByName(name: String): String? {
+        return table.select(dataSource) {
+            where("name" eq name)
+        }.firstOrNull {
+            getString("uuid")
+        }
     }
 }

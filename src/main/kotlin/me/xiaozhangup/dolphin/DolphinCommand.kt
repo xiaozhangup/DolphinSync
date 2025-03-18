@@ -1,8 +1,10 @@
 package me.xiaozhangup.dolphin
 
+import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerStatisticMigrate
+import me.xiaozhangup.dolphin.utils.DateFormatter
 import me.xiaozhangup.dolphin.utils.notify
 import me.xiaozhangup.dolphin.utils.submitScope
 import org.bukkit.command.CommandSender
@@ -15,11 +17,12 @@ import taboolib.expansion.createHelper
 object DolphinCommand {
     @Awake(LifeCycle.ENABLE)
     fun regCommand() {
-        command("dolphinsync", permissionDefault = PermissionDefault.OP, permission = "dolphinaync.admin") {
+        command("dolphinsync", permissionDefault = PermissionDefault.OP, permission = "dolphinsync.admin") {
             literal("reload") {
                 execute<CommandSender> { sender, _, _ ->
                     DolphinSync.settings = DolphinSettings(DolphinSync.config.getConfigurationSection("settings")!!)
-                    sender.notify("配置重载成功! {0}", DolphinSync.settings.toString())
+//                    sender.notify("配置重载成功! {0}", DolphinSync.settings.toString())
+                    sender.notify("配置重载成功!")
                 }
             }
 
@@ -27,6 +30,109 @@ object DolphinCommand {
                 execute<CommandSender> { sender, _, _ ->
                     DolphinSync.settings.debug = !DolphinSync.settings.debug
                     sender.notify("调试模式已切换为 {0}", DolphinSync.settings.debug)
+                }
+            }
+
+            literal("backup") {
+                literal("query") {
+                    dynamic("name") {
+                        suggestion<CommandSender>(uncheck = true) { _, _ ->
+                            DatabaseContainer.tablePlayerData.allNames()
+                        }
+
+                        execute<CommandSender> { sender, _, arg ->
+                            sender.notify("正在查询玩家 {0} 的备份数据...", arg)
+                            submitScope {
+                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(arg)
+                                if (uuid != null) {
+                                    val timestamps = DatabaseContainer.tablePlayerDataBak.allBackups(uuid)
+                                    var order = 1
+                                    sender.notify("玩家 {0} 的备份数据如下: {1}", arg, "(总计: ${timestamps.size} 份)")
+                                    for (timestamp in timestamps) {
+                                        val dateTime = DateFormatter.formatToChineseDateTime(timestamp)
+                                        sender.notify(" ${order++}. 日期: {0} <gray><hover:show_text:'$dateTime'><click:suggest_command:'/dolphinsync backup rollback $uuid $timestamp'>(单击回滚)</click></hover></gray>",
+                                            dateTime
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    createHelper()
+                }
+
+                literal("clear") {
+                    dynamic("name") {
+                        suggestion<CommandSender>(uncheck = true) { _, _ ->
+                            DatabaseContainer.tablePlayerData.allNames()
+                        }
+
+                        execute<CommandSender> { sender, _, arg ->
+                            sender.notify("移除玩家 {0} 的全部备份数据...", arg)
+                            submitScope {
+                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(arg)
+                                if (uuid != null) {
+                                    DatabaseContainer.tablePlayerDataBak.removeAllBackups(uuid)
+                                    sender.notify("移除玩家 {0} 的全部备份数据成功!", arg)
+                                } else {
+                                    sender.notify("玩家 {0} 不存在!", arg)
+                                }
+                            }
+                        }
+                    }
+
+                    createHelper()
+                }
+
+                literal("rollback") {
+                    dynamic("uuid") {
+                        dynamic("timestamp") {
+                            execute<CommandSender> { sender, context, _ ->
+                                val timestamp = context["timestamp"].toLong()
+                                val uuid = context["uuid"]
+                                if (!DolphinSync.settings.backup) {
+                                    sender.notify("备份功能未启用!")
+                                    return@execute
+                                }
+
+                                val name = DatabaseContainer.tablePlayerData.getNameByUUID(uuid)
+                                if (name == null) {
+                                    sender.notify("玩家 {0} 不存在!", uuid)
+                                    return@execute
+                                }
+
+                                submitScope {
+                                    if (DatabaseContainer.tablePlayerData.isLocked(uuid)) {
+                                        sender.notify("玩家 {0} 数据被锁定, 请稍后再试!", name)
+                                        return@submitScope
+                                    }
+                                    if (DatabaseContainer.tablePlayerDataBak.allBackups(uuid).isNotEmpty()) {
+                                        val byte = DatabaseContainer.tablePlayerDataBak.getBackup(uuid, timestamp)
+                                        if (byte == null) {
+                                            sender.notify("玩家 {0} 的备份数据不存在!", name)
+                                            return@submitScope
+                                        }
+
+                                        val current = DatabaseContainer.tablePlayerData.getData(uuid, false)!!
+                                        DatabaseContainer.tablePlayerDataBak.insert(uuid, current)
+                                        DatabaseContainer.tablePlayerData.saveData(uuid, byte, false)
+                                        sender.notify("回滚玩家 {0} 的备份数据成功!", name)
+                                    } else {
+                                        sender.notify("玩家 {0} 没有备份数据!", name)
+                                    }
+                                }
+                            }
+                        }
+
+                        createHelper()
+                    }
+
+                    createHelper()
+                }
+
+                execute<CommandSender> { sender, _, _ ->
+                    sender.notify("当前已经 {0} 备份", if (DolphinSync.settings.backup) "开启" else "关闭")
                 }
             }
 

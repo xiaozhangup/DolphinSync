@@ -34,4 +34,40 @@ class TablePlayerDataBak : SQLTable {
             )
         }
     }
+
+    fun getBackup(uuid: String, timestamp: Long): ByteArray? {
+        return table.select(dataSource) {
+            where {
+                "uuid" eq uuid
+                "modified" eq timestamp
+            }
+        }.firstOrNull {
+            getBytes("data")
+        }
+    }
+
+    fun allBackups(uuid: String): List<Long> {
+        val result = table.select(dataSource) {
+            where("uuid" eq uuid)
+        }.map {
+            getLong("modified")
+        }
+
+        return result
+    }
+
+    fun removeBackup(uuid: String, timestamp: Long) {
+        table.delete(dataSource) {
+            where {
+                "uuid" eq uuid
+                "modified" eq timestamp
+            }
+        }
+    }
+
+    fun removeAllBackups(uuid: String) {
+        table.delete(dataSource) {
+            where("uuid" eq uuid)
+        }
+    }
 }

@@ -4,6 +4,7 @@ import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.utils.BackupFilter
 import me.xiaozhangup.dolphin.utils.ExecutionTimer
 import me.xiaozhangup.dolphin.utils.debug
 import me.xiaozhangup.dolphin.utils.notify
@@ -32,8 +33,21 @@ class DolphinDataSource : ProfileSource {
             } else {
                 tablePlayerData.saveData(uuid, byte, true)
                 RedisHandle.publish("data:$uuid")
-                tablePlayerDataBak.insert(player.uniqueId.toString(), byte) // 备份
+                tablePlayerDataBak.insert(uuid, byte) // 备份
                 debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
+
+                if (DolphinSync.settings.backup) {
+                    var count = 0
+                    BackupFilter.determineBackupsToRemove(
+                        tablePlayerDataBak.allBackups(uuid)
+                    ).map {
+                        tablePlayerDataBak.removeBackup(uuid, it)
+                        count++
+                        debug("[Sync] [Data] Removed backup $it for ${player.name}")
+                    }
+
+                    debug("[Sync] [Data] Removed $count backups for ${player.name}")
+                }
             }
         }
 
