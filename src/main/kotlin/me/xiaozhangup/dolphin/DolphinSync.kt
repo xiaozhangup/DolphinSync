@@ -12,6 +12,7 @@ import taboolib.common.platform.function.info
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.Configuration
 import taboolib.platform.BukkitPlugin
+import java.lang.System.currentTimeMillis
 import java.util.concurrent.TimeUnit
 
 object DolphinSync : Plugin() {
@@ -47,7 +48,7 @@ object DolphinSync : Plugin() {
         CoroutineTask.forceSync = true
         if (settings.backup) {
             DatabaseContainer.tablePlayerDataBak.removeAllBackups(
-                TimeUnit.DAYS.toMillis(30) // 30 天钱的数据不要了
+                currentTimeMillis() - TimeUnit.DAYS.toMillis(30) // 30 天钱的数据不要了
             )
         }
         Bukkit.getOnlinePlayers().forEach {
