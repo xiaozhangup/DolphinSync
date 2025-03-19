@@ -1,9 +1,11 @@
 package me.xiaozhangup.dolphin
 
-import me.xiaozhangup.dolphin.data.DatabaseContainer
+import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
+import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerStatisticMigrate
+import me.xiaozhangup.dolphin.utils.BackupFilter
 import me.xiaozhangup.dolphin.utils.DateFormatter
 import me.xiaozhangup.dolphin.utils.notify
 import me.xiaozhangup.dolphin.utils.submitScope
@@ -37,15 +39,15 @@ object DolphinCommand {
                 literal("query") {
                     dynamic("name") {
                         suggestion<CommandSender>(uncheck = true) { _, _ ->
-                            DatabaseContainer.tablePlayerData.allNames()
+                            tablePlayerData.allNames()
                         }
 
                         execute<CommandSender> { sender, _, arg ->
                             sender.notify("正在查询玩家 {0} 的备份数据...", arg)
                             submitScope {
-                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(arg)
+                                val uuid = tablePlayerData.getUUIDByName(arg)
                                 if (uuid != null) {
-                                    val timestamps = DatabaseContainer.tablePlayerDataBak.allBackups(uuid)
+                                    val timestamps = tablePlayerDataBak.allBackups(uuid)
                                     var order = 1
                                     sender.notify("玩家 {0} 的备份数据如下: {1}", arg, "(总计: ${timestamps.size} 份)")
                                     for (timestamp in timestamps) {
@@ -63,18 +65,18 @@ object DolphinCommand {
                     createHelper()
                 }
 
-                literal("clear") {
+                literal("remove") {
                     dynamic("name") {
                         suggestion<CommandSender>(uncheck = true) { _, _ ->
-                            DatabaseContainer.tablePlayerData.allNames()
+                            tablePlayerData.allNames()
                         }
 
                         execute<CommandSender> { sender, _, arg ->
                             sender.notify("移除玩家 {0} 的全部备份数据...", arg)
                             submitScope {
-                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(arg)
+                                val uuid = tablePlayerData.getUUIDByName(arg)
                                 if (uuid != null) {
-                                    DatabaseContainer.tablePlayerDataBak.removeAllBackups(uuid)
+                                    tablePlayerDataBak.removeAllBackups(uuid)
                                     sender.notify("移除玩家 {0} 的全部备份数据成功!", arg)
                                 } else {
                                     sender.notify("玩家 {0} 不存在!", arg)
@@ -84,6 +86,35 @@ object DolphinCommand {
                     }
 
                     createHelper()
+                }
+
+                literal("clear") {
+                    dynamic("name") {
+                        suggestion<CommandSender>(uncheck = true) { _, _ ->
+                            tablePlayerData.allNames()
+                        }
+
+                        execute<CommandSender> { sender, _, arg ->
+                            if (!DolphinSync.settings.backup) {
+                                sender.notify("备份功能未开启!")
+                                return@execute
+                            }
+
+                            val uuid = tablePlayerData.getUUIDByName(arg)
+                            if (uuid == null) {
+                                sender.notify("玩家 {0} 不存在!", arg)
+                                return@execute
+                            }
+
+                            sender.notify("正在清理玩家 {0} 的备份数据...", arg)
+                            BackupFilter.determineBackupsToRemove(
+                                tablePlayerDataBak.allBackups(uuid)
+                            ).forEach {
+                                tablePlayerDataBak.removeBackup(uuid, it)
+                                sender.notify("已清理备份数据 {1}", arg, DateFormatter.formatToChineseDateTime(it))
+                            }
+                        }
+                    }
                 }
 
                 literal("rollback") {
@@ -97,27 +128,27 @@ object DolphinCommand {
                                 }
 
                                 val name = context["name"]
-                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(name)
+                                val uuid = tablePlayerData.getUUIDByName(name)
                                 if (uuid == null) {
                                     sender.notify("玩家 {0} 不存在!", name)
                                     return@execute
                                 }
 
                                 submitScope {
-                                    if (DatabaseContainer.tablePlayerData.isLocked(uuid)) {
+                                    if (tablePlayerData.isLocked(uuid)) {
                                         sender.notify("玩家 {0} 数据被锁定, 请稍后再试!", name)
                                         return@submitScope
                                     }
-                                    if (DatabaseContainer.tablePlayerDataBak.allBackups(uuid).isNotEmpty()) {
-                                        val byte = DatabaseContainer.tablePlayerDataBak.getBackup(uuid, timestamp)
+                                    if (tablePlayerDataBak.allBackups(uuid).isNotEmpty()) {
+                                        val byte = tablePlayerDataBak.getBackup(uuid, timestamp)
                                         if (byte == null) {
                                             sender.notify("玩家 {0} 的备份数据不存在!", name)
                                             return@submitScope
                                         }
 
-                                        val current = DatabaseContainer.tablePlayerData.getData(uuid, false)!!
-                                        DatabaseContainer.tablePlayerDataBak.insert(uuid, current)
-                                        DatabaseContainer.tablePlayerData.saveData(uuid, byte, false)
+                                        val current = tablePlayerData.getData(uuid, false)!!
+                                        tablePlayerDataBak.insert(uuid, current)
+                                        tablePlayerData.saveData(uuid, byte, false)
                                         sender.notify("回滚玩家 {0} 的备份数据成功!", name)
                                     } else {
                                         sender.notify("玩家 {0} 没有备份数据!", name)
