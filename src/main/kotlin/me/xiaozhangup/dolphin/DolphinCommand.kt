@@ -50,7 +50,7 @@ object DolphinCommand {
                                     sender.notify("玩家 {0} 的备份数据如下: {1}", arg, "(总计: ${timestamps.size} 份)")
                                     for (timestamp in timestamps) {
                                         val dateTime = DateFormatter.formatToChineseDateTime(timestamp)
-                                        sender.notify(" ${order++}. 日期: {0} <gray><hover:show_text:'$dateTime'><click:suggest_command:'/dolphinsync backup rollback $uuid $timestamp'>(单击回滚)</click></hover></gray>",
+                                        sender.notify(" ${order++}. 日期: {0} <gray><hover:show_text:'$dateTime'><click:suggest_command:'/dolphinsync backup rollback $arg $timestamp'>(单击回滚)</click></hover></gray>",
                                             dateTime
                                         )
                                     }
@@ -86,19 +86,19 @@ object DolphinCommand {
                 }
 
                 literal("rollback") {
-                    dynamic("uuid") {
+                    dynamic("name") {
                         dynamic("timestamp") {
                             execute<CommandSender> { sender, context, _ ->
                                 val timestamp = context["timestamp"].toLong()
-                                val uuid = context["uuid"]
                                 if (!DolphinSync.settings.backup) {
                                     sender.notify("备份功能未启用!")
                                     return@execute
                                 }
 
-                                val name = DatabaseContainer.tablePlayerData.getNameByUUID(uuid)
-                                if (name == null) {
-                                    sender.notify("玩家 {0} 不存在!", uuid)
+                                val name = context["name"]
+                                val uuid = DatabaseContainer.tablePlayerData.getUUIDByName(name)
+                                if (uuid == null) {
+                                    sender.notify("玩家 {0} 不存在!", name)
                                     return@execute
                                 }
 

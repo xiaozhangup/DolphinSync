@@ -17,7 +17,7 @@ object BackupFilter {
         val (group3, remaining3) = partitionGroup(remaining2, cutoff30Days)
 
         return remaining3 +
-                group1.drop(16) +
+                group1.drop(8) +
                 group2.drop(7) +
                 group3.drop(6)
     }

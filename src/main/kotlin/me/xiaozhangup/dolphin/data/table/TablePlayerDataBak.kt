@@ -70,4 +70,10 @@ class TablePlayerDataBak : SQLTable {
             where("uuid" eq uuid)
         }
     }
+
+    fun removeAllBackups(before: Long) {
+        table.delete(dataSource) {
+            where("modified" lt before)
+        }
+    }
 }
