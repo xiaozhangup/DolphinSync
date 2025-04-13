@@ -42,7 +42,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.4-R0.1-SNAPSHOT")
     compileOnly("ink.ptms.core:v12104:12104-minimize:mapped")
     compileOnly("ink.ptms.core:v12104:12104-minimize:universal")
     compileOnly(kotlin("stdlib"))
