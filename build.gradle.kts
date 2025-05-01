@@ -27,8 +27,14 @@ taboolib {
     version {
         taboolib = "6.2.3-20d868d"
         coroutines = "1.10.1"
-//        skipKotlinRelocate = true
-//        skipKotlin = true
+        skipKotlinRelocate = true
+        skipKotlin = true
+    }
+
+    description {
+        dependencies {
+            name("CarbKotlin")
+        }
     }
 
     relocate("ink.pmc.advkt", "me.xiaozhangup.dolphin.lib.advkt")
