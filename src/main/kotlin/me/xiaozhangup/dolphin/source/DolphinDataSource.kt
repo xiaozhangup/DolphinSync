@@ -6,7 +6,11 @@ import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.redis.RedisHandle
 import me.xiaozhangup.dolphin.utils.*
 import me.xiaozhangup.octopus.ProfileSource
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
 import java.lang.System.currentTimeMillis
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -16,6 +20,7 @@ class DolphinDataSource : ProfileSource {
 
     init {
         enabled = true
+        Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
         notify("DolphinDataSource 已启用")
     }
 
@@ -107,16 +112,18 @@ class DolphinDataSource : ProfileSource {
 
     // 可以忽视锁，直接读取
     override fun load(player: String, username: String): Optional<ByteArray> {
-        return if (tablePlayerData.hasData(player)) {
-            return Optional.of(tablePlayerData.getData(player, false)!!)
-        } else {
-            return Optional.empty()
-        }
+        return if (tablePlayerData.hasData(player)) Optional.of(tablePlayerData.getData(player, false)!!)
+        else Optional.empty()
     }
 
-    companion object {
+    companion object : Listener {
         private var enabled = false
         private val futureQueues = ConcurrentHashMap<String, CompletableFuture<ByteArray>>()
+
+        @EventHandler
+        fun e(e: PlayerQuitEvent) {
+            e.player.vehicle?.removePassenger(e.player)
+        }
 
         fun completeIfNeeded(uuid: String) {
             if (!enabled) return

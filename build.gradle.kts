@@ -3,8 +3,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.22"
-    kotlin("jvm") version "2.1.10"
+    id("io.izzel.taboolib") version "2.0.23"
+    kotlin("jvm") version "2.1.21"
 }
 
 taboolib {
@@ -25,8 +25,8 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.2.3-20d868d"
-        coroutines = "1.10.1"
+        taboolib = "6.2.3-a372a91"
+        coroutines = "1.10.2"
         skipKotlinRelocate = true
         skipKotlin = true
     }
@@ -37,7 +37,7 @@ taboolib {
         }
     }
 
-    relocate("ink.pmc.advkt", "me.xiaozhangup.dolphin.lib.advkt")
+    relocate("plutoproject.adventurekt", "me.xiaozhangup.dolphin.lib.adventurekt")
 }
 
 repositories {
@@ -48,13 +48,13 @@ repositories {
 }
 
 dependencies {
-    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.4-R0.1-SNAPSHOT")
-    compileOnly("ink.ptms.core:v12104:12104-minimize:mapped")
-    compileOnly("ink.ptms.core:v12104:12104-minimize:universal")
+    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.8-R0.1-SNAPSHOT")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 
-    taboo("ink.pmc.advkt:core:1.0.1")
+    taboo("plutoproject.adventurekt:core:2.1.1") {
+        isTransitive = false
+    }
 }
 
 tasks.withType<JavaCompile> {

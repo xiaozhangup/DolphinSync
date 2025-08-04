@@ -1,15 +1,20 @@
 package me.xiaozhangup.dolphin.utils
 
-import ink.pmc.advkt.component.*
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
+import plutoproject.adventurekt.component
+import plutoproject.adventurekt.text.mini
+import plutoproject.adventurekt.text.raw
+import plutoproject.adventurekt.text.style.textDarkGray
+import plutoproject.adventurekt.text.text
+import plutoproject.adventurekt.text.with
 import taboolib.common.util.replaceWithOrder
 
 object DolphinMessage {
     val PREFIX = component {
-        text("[") with darkGray()
-        text("DolphinSync") with hex("#86c4da")
-        text("]") with darkGray()
+        text("[") with textDarkGray
+        text("DolphinSync") with "#86c4da"
+        text("]") with textDarkGray
     }
 }
 
@@ -18,7 +23,7 @@ fun CommandSender.notify(message: String, vararg placeholder: Any) {
         component {
             raw(DolphinMessage.PREFIX)
             text(" ")
-            miniMessage(
+            mini(
                 "<color:#bcdeea>${
                     message.replaceWithOrder(*placeholder.map { "<color:#e4f2f7>$it</color>" }.toTypedArray())
                 }</color>"
