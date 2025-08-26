@@ -11,13 +11,10 @@ taboolib {
     env {
         // 安装模块
         install(
+            Basic,
             Bukkit,
             BukkitHook,
-            BukkitUI,
-            BukkitNMS,
-            BukkitNMSUtil,
             BukkitUtil,
-            Basic,
             MinecraftChat,
             CommandHelper,
             AlkaidRedis,
@@ -25,7 +22,7 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.2.3-a372a91"
+        taboolib = "6.2.3-test-17"
         coroutines = "1.10.2"
         skipKotlinRelocate = true
         skipKotlin = true
