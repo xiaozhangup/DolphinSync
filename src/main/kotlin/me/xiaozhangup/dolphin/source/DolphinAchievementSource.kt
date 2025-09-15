@@ -4,6 +4,10 @@ import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerAdvancement
 import me.xiaozhangup.dolphin.redis.RedisHandle
 import me.xiaozhangup.dolphin.utils.*
+import me.xiaozhangup.dolphin.utils.obj.PopTimer
+import me.xiaozhangup.dolphin.utils.obj.debug
+import me.xiaozhangup.dolphin.utils.obj.logger
+import me.xiaozhangup.dolphin.utils.obj.submitScope
 import me.xiaozhangup.octopus.JsonDataSource
 import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
@@ -16,21 +20,20 @@ import java.util.concurrent.ConcurrentHashMap
 class DolphinAchievementSource : JsonDataSource {
 
     init {
-        enabled = true
         Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
-        notify("DolphinAchievementSource 已启用")
+        logger("DolphinAchievementSource 已启用")
     }
 
     override fun save(json: String, uuid: String) {
-        val timer = ExecutionTimer()
+        val timer = PopTimer()
         submitScope {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
-                tablePlayerAdvancement.saveData(uuid, GzipUtils.compress(json), true) // 存
+                tablePlayerAdvancement.saveData(uuid, CompressUtils.compress(json), true) // 存
                 RedisHandle.publish("achievement:$uuid") // 广播
                 debug("[Sync] [Advancement] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {
-                tablePlayerAdvancement.saveData(uuid, GzipUtils.compress(json)) // 存
+                tablePlayerAdvancement.saveData(uuid, CompressUtils.compress(json)) // 存
                 debug("[Sync] [Advancement] $uuid saved (in ${timer.pop()}ms)")
             }
         }
@@ -49,7 +52,7 @@ class DolphinAchievementSource : JsonDataSource {
             return null
         }
 
-        val timer = ExecutionTimer()
+        val timer = PopTimer()
         var tried = 0
         val future = CompletableFuture<ByteArray>().apply {
             thenAccept {
@@ -85,11 +88,10 @@ class DolphinAchievementSource : JsonDataSource {
             }
         }
 
-        return GzipUtils.decompress(future.get()) // 阻塞式获取
+        return CompressUtils.decompress(future.get()) // 阻塞式获取
     }
 
     companion object : Listener {
-        private var enabled = false
         private val quitedPlayers = mutableListOf<String>()
         private val futureQueues = ConcurrentHashMap<String, CompletableFuture<ByteArray>>()
 
@@ -99,7 +101,6 @@ class DolphinAchievementSource : JsonDataSource {
         }
 
         fun completeIfNeeded(uuid: String) {
-            if (!enabled) return
             val future = futureQueues[uuid] ?: return
             future.complete(
                 tablePlayerAdvancement.getData(uuid, false)

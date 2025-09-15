@@ -5,7 +5,7 @@ import me.xiaozhangup.dolphin.redis.RedisHandle
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
 import me.xiaozhangup.dolphin.source.DolphinDataSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
-import me.xiaozhangup.dolphin.utils.CoroutineTask
+import me.xiaozhangup.dolphin.utils.obj.CoroutineTask
 import org.bukkit.Bukkit
 import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.info

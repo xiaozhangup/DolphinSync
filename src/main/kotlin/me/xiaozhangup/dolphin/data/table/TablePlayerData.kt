@@ -91,14 +91,6 @@ class TablePlayerData : SQLTable {
         }
     }
 
-    fun lockData(uuid: String) {
-        table.update(dataSource) {
-            where("uuid" eq uuid)
-
-            set("lock", currentTimeMillis())
-        }
-    }
-
     fun isLocked(uuid: String): Boolean {
         return table.select(dataSource) {
             where("uuid" eq uuid)
@@ -121,11 +113,11 @@ class TablePlayerData : SQLTable {
 
     fun getData(
         uuid: String,
-        nullWhenLocked: Boolean = true
+        useLock: Boolean = true
     ): ByteArray? {
         val result = table.select(dataSource) {
             where("uuid" eq uuid)
-            if (nullWhenLocked) {
+            if (useLock) {
                 where("lock" eq 0)
             }
         }.firstOrNull {
@@ -138,22 +130,41 @@ class TablePlayerData : SQLTable {
     fun getData(
         uuid: String,
         name: String,
-        nullWhenLocked: Boolean = true
+        useLock: Boolean = true
     ): ByteArray? {
         val result = table.select(dataSource) {
-            where {
-                "uuid" eq uuid
-                "name" eq name
+            where("uuid" eq uuid)
+            where("name" eq name)
+            if (useLock) {
+                where("lock" eq 0)
             }
         }.firstOrNull {
-            val lock = getLong("lock")
-            if (lock > 0L && nullWhenLocked) {
-                null
-            } else {
-                getBytes("data")
-            }
+            getBytes("data")
         }
 
+        return result
+    }
+
+    fun getDataAndLock(
+        uuid: String,
+        useLock: Boolean = true
+    ) : ByteArray? {
+        var result: ByteArray? = null
+        table.workspace(dataSource) {
+            select {
+                where("uuid" eq uuid)
+                if (useLock) {
+                    where("lock" eq 0)
+                }
+            }.firstOrNull {
+                result = getBytes("data")
+            }
+
+            update {
+                where("uuid" eq uuid)
+                set("lock", currentTimeMillis())
+            }
+        }
         return result
     }
 

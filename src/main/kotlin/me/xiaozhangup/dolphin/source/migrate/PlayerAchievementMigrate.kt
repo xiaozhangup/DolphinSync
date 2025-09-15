@@ -2,8 +2,8 @@ package me.xiaozhangup.dolphin.source.migrate
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate.getWorldFolder
-import me.xiaozhangup.dolphin.utils.GzipUtils
-import me.xiaozhangup.dolphin.utils.notify
+import me.xiaozhangup.dolphin.utils.CompressUtils
+import me.xiaozhangup.dolphin.utils.obj.notify
 import org.bukkit.command.CommandSender
 import java.io.File
 import java.util.*
@@ -20,7 +20,7 @@ object PlayerAchievementMigrate {
                     val uuid = UUID.fromString(file.nameWithoutExtension)
                     val modified = file.lastModified()
 
-                    val data = GzipUtils.compress(file.readText())
+                    val data = CompressUtils.compress(file.readText())
                     val uid = uuid.toString()
                     if (DatabaseContainer.tablePlayerAdvancement.lastModified(uid) >= modified) {
                         sender?.notify("跳过 {0} 因为已经迁移过了", file.name)

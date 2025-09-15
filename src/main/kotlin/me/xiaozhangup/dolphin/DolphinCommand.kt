@@ -6,15 +6,17 @@ import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerStatisticMigrate
 import me.xiaozhangup.dolphin.utils.BackupFilter
-import me.xiaozhangup.dolphin.utils.DateFormatter
-import me.xiaozhangup.dolphin.utils.notify
-import me.xiaozhangup.dolphin.utils.submitScope
+import me.xiaozhangup.dolphin.utils.obj.notify
+import me.xiaozhangup.dolphin.utils.obj.submitScope
 import org.bukkit.command.CommandSender
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.command.PermissionDefault
 import taboolib.common.platform.command.command
 import taboolib.expansion.createHelper
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 object DolphinCommand {
     @Awake(LifeCycle.ENABLE)
@@ -51,7 +53,7 @@ object DolphinCommand {
                                     var order = 1
                                     sender.notify("玩家 {0} 的备份数据如下: {1}", arg, "(总计: ${timestamps.size} 份)")
                                     for (timestamp in timestamps) {
-                                        val dateTime = DateFormatter.formatToChineseDateTime(timestamp)
+                                        val dateTime = formatToChineseDateTime(timestamp)
                                         sender.notify(
                                             " ${order++}. 日期: {0} <gray><hover:show_text:'$dateTime'><click:suggest_command:'/dolphinsync backup rollback $arg $timestamp'>(单击回滚)</click></hover></gray>",
                                             dateTime
@@ -111,7 +113,7 @@ object DolphinCommand {
                                 tablePlayerDataBak.allBackups(uuid)
                             ).forEach {
                                 tablePlayerDataBak.removeBackup(uuid, it)
-                                sender.notify("已清理备份数据 {1}", arg, DateFormatter.formatToChineseDateTime(it))
+                                sender.notify("已清理备份数据 {1}", arg, formatToChineseDateTime(it))
                             }
                         }
                     }
@@ -201,5 +203,14 @@ object DolphinCommand {
 
             createHelper()
         }
+    }
+
+    private fun formatToChineseDateTime(
+        timestamp: Long,
+        zoneId: ZoneId = ZoneId.of("Asia/Shanghai")
+    ): String {
+        val formatter = DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm")
+            .withZone(zoneId)
+        return formatter.format(Instant.ofEpochMilli(timestamp))
     }
 }

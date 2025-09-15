@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
-object GzipUtils {
+object CompressUtils {
     fun compress(input: String): ByteArray {
         val byteArrayOutputStream = ByteArrayOutputStream()
         val gzipOutputStream = GZIPOutputStream(byteArrayOutputStream)

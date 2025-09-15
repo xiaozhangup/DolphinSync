@@ -5,7 +5,7 @@ import me.xiaozhangup.dolphin.data.table.TablePlayerAdvancement
 import me.xiaozhangup.dolphin.data.table.TablePlayerData
 import me.xiaozhangup.dolphin.data.table.TablePlayerDataBak
 import me.xiaozhangup.dolphin.data.table.TablePlayerStatistic
-import me.xiaozhangup.dolphin.utils.debug
+import me.xiaozhangup.dolphin.utils.obj.debug
 import taboolib.common.env.RuntimeDependencies
 import taboolib.common.env.RuntimeDependency
 import taboolib.library.configuration.ConfigurationSection

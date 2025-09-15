@@ -1,7 +1,7 @@
 package me.xiaozhangup.dolphin.source.migrate
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer
-import me.xiaozhangup.dolphin.utils.notify
+import me.xiaozhangup.dolphin.utils.obj.notify
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import java.io.File
