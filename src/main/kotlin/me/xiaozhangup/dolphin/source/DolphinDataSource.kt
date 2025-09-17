@@ -32,15 +32,19 @@ class DolphinDataSource : ProfileSource {
         val future = CompletableFuture<Boolean>()
         submitScope {
             val uuid = player.uniqueId.toString()
-            if (player.clientConnected()) {
+            val connected = player.clientConnected()
+            debug("[Sync] [Data] Saving for ${player.name}... (Connected: $connected)")
+            if (connected) {
                 tablePlayerData.saveData(uuid, byte)
                 future.complete(true)
                 debug("[Sync] [Data] Saved for ${player.name} (in ${timer.pop()}ms)")
             } else {
                 tablePlayerData.saveData(uuid, player.name, byte, true)
-                RedisHandle.publish("data:$uuid")
                 future.complete(true)
                 debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
+
+                RedisHandle.publish("data:$uuid")
+                debug("[Sync] [Data] Published redis message for ${player.name}")
 
                 if (DolphinSync.settings.backup) {
                     tablePlayerDataBak.insert(uuid, byte) // 备份

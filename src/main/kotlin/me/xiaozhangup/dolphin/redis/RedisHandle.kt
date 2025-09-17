@@ -19,22 +19,21 @@ object RedisHandle {
     }
 
     fun initAlkaidRedis() {
-        redisConnection.connection().apply {
-            subscribe(CHANNEL, patternMode = false) {
-                debug("[AlkaidRedis] Redis received message: $message")
-                val (type, uuid) = message.split(':', limit = 2) // 通知以及完成保存的类型
-                when (type) {
-                    "achievement" -> {
-                        DolphinAchievementSource.completeIfNeeded(uuid)
-                    }
+        val connection = redisConnection.connection()
+        connection.subscribe(CHANNEL, patternMode = false) {
+            debug("[AlkaidRedis] Redis received message: $message")
+            val (type, uuid) = message.split(':', limit = 2) // 通知以及完成保存的类型
+            when (type) {
+                "achievement" -> {
+                    DolphinAchievementSource.completeIfNeeded(uuid)
+                }
 
-                    "data" -> {
-                        DolphinDataSource.completeIfNeeded(uuid)
-                    }
+                "data" -> {
+                    DolphinDataSource.completeIfNeeded(uuid)
+                }
 
-                    "statistic" -> {
-                        DolphinStatisticSource.completeIfNeeded(uuid)
-                    }
+                "statistic" -> {
+                    DolphinStatisticSource.completeIfNeeded(uuid)
                 }
             }
         }
