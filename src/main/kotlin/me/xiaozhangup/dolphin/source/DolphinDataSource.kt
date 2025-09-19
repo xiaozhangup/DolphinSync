@@ -30,7 +30,7 @@ class DolphinDataSource : ProfileSource {
     override fun save(player: Player, byte: ByteArray): Boolean {
         val timer = PopTimer()
         val future = CompletableFuture<Boolean>()
-        submitScope {
+        submitScope("data_${player.uniqueId}") {
             val uuid = player.uniqueId.toString()
             val connected = player.clientConnected()
             debug("[Sync] [Data] Saving for ${player.name}... (Connected: $connected)")
@@ -67,7 +67,7 @@ class DolphinDataSource : ProfileSource {
         val uuid = player.uniqueId.toString()
 
         if (!tablePlayerData.hasData(uuid)) {
-            submitScope {
+            submitScope("data_${player.uniqueId}") {
                 tablePlayerData.insert(
                     uuid,
                     player.name,
@@ -89,7 +89,7 @@ class DolphinDataSource : ProfileSource {
             futureQueues[uuid] = this
         } // 加上对应任务
 
-        submitScope(period = 5) {
+        submitScope(tag = "data_${player.uniqueId}", period = 5) {
             if (future.isDone) {
                 debug("[Sync] [Data] $uuid loaded in another way (tried $tried times)")
                 cancel()

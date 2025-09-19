@@ -26,7 +26,7 @@ class DolphinStatisticSource : JsonDataSource {
 
     override fun save(json: String, uuid: String) {
         val timer = PopTimer()
-        submitScope {
+        submitScope("static_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
                 tablePlayerStatistic.saveData(uuid, CompressUtils.compress(json), true) // 存
                 RedisHandle.publish("statistic:$uuid") // 广播
@@ -41,7 +41,7 @@ class DolphinStatisticSource : JsonDataSource {
 
     override fun load(uuid: String): String? {
         if (!tablePlayerStatistic.hasData(uuid)) { // 如果没数据，直接返回空同时插入一个空
-            submitScope {
+            submitScope("static_$uuid") {
                 tablePlayerStatistic.insert(
                     uuid,
                     currentTimeMillis(),
@@ -63,7 +63,7 @@ class DolphinStatisticSource : JsonDataSource {
             futureQueues[uuid] = this
         } // 加上对应任务
 
-        submitScope(period = 5) {
+        submitScope(tag = "static_$uuid", period = 5) {
             if (future.isDone) {
                 debug("[Sync] [Statistic] $uuid loaded in another way (tried $tried times)")
                 cancel()

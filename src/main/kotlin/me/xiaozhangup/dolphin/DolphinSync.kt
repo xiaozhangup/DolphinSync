@@ -45,7 +45,7 @@ object DolphinSync : Plugin() {
     }
 
     override fun onDisable() {
-        CoroutineTask.forceSync = true
+        CoroutineTask.setForceSync(true)
         if (settings.backup) {
             DatabaseContainer.tablePlayerDataBak.removeAllBackups(
                 currentTimeMillis() - TimeUnit.DAYS.toMillis(30) // 30 天钱的数据不要了

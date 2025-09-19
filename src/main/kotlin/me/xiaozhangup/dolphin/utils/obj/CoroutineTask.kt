@@ -1,39 +1,81 @@
 package me.xiaozhangup.dolphin.utils.obj
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 object CoroutineTask {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    var forceSync = false
+    private val tagMutexes = ConcurrentHashMap<String, TagMutexInfo>()
 
-    fun submit(period: Long = 0L, delay: Long = 0L, block: suspend TaskScope.() -> Unit): Job {
-        val job = scope.launch {
-            if (delay > 0) delay(delay)
-            val taskScope = TaskScope(this)
-            if (period > 0) {
-                while (isActive) {
-                    taskScope.block()
-                    delay(period)
+    @Volatile
+    private var forceSync = false
+
+    fun setForceSync(value: Boolean) { forceSync = value }
+    fun isForceSync(): Boolean = forceSync
+
+    fun submit(
+        tag: String,
+        period: Long = 0L,
+        block: suspend TaskScope.() -> Unit
+    ): Job {
+        return scope.launch {
+            val mi = acquireTagMutex(tag)
+            try {
+                mi.mutex.withLock {
+                    val job = coroutineContext[Job]!!
+                    val ts = TaskScope(job)
+                    if (period > 0L) {
+                        while (isActive) {
+                            val start = System.nanoTime()
+                            ts.block()
+                            val elapsedMs = (System.nanoTime() - start) / 1_000_000
+                            val wait = period - elapsedMs
+                            if (wait > 0) delay(wait)
+                        }
+                    } else {
+                        ts.block()
+                    }
                 }
-            } else {
-                taskScope.block()
+            } finally {
+                releaseTagMutex(tag)
             }
         }
-        return job
     }
+
+    private fun acquireTagMutex(tag: String): TagMutexInfo {
+        return tagMutexes.compute(tag) { _, existing ->
+            if (existing == null) TagMutexInfo() else {
+                existing.refCount.incrementAndGet()
+                existing
+            }
+        }!!
+    }
+
+    private fun releaseTagMutex(tag: String) {
+        tagMutexes.computeIfPresent(tag) { _, existing ->
+            if (existing.refCount.decrementAndGet() <= 0) null else existing
+        }
+    }
+
+    private class TagMutexInfo(
+        val mutex: Mutex = Mutex(),
+        val refCount: AtomicInteger = AtomicInteger(1)
+    )
 }
 
-class TaskScope(private val job: CoroutineScope) {
-    fun cancel() {
-        job.cancel()
-    }
-
+class TaskScope(private val job: Job) {
+    fun cancel() = job.cancel()
 }
 
-fun submitScope(period: Long = 0L, delay: Long = 0L, block: suspend TaskScope.() -> Unit): Job {
-    if (CoroutineTask.forceSync) {
-        runBlocking { block(TaskScope(this)) }
-        return Job().apply { complete() }
-    }
-    return CoroutineTask.submit(period, delay, block)
+fun submitScope(
+    tag: String = "default",
+    period: Long = 0L,
+    block: suspend TaskScope.() -> Unit
+): Job {
+    val job = CoroutineTask.submit(tag, period, block)
+    if (CoroutineTask.isForceSync()) runBlocking { job.join() }
+    return job
 }
