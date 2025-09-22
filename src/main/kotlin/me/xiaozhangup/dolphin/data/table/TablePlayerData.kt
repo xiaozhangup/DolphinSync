@@ -150,7 +150,7 @@ class TablePlayerData : SQLTable {
         useLock: Boolean = true
     ) : ByteArray? {
         var result: ByteArray? = null
-        table.workspace(dataSource) {
+        val success = table.transaction(dataSource) {
             select {
                 where("uuid" eq uuid)
                 if (useLock) {
@@ -164,8 +164,8 @@ class TablePlayerData : SQLTable {
                 where("uuid" eq uuid)
                 set("lock", currentTimeMillis())
             }
-        }
-        return result
+        }.isSuccess
+        return if (success) result else null
     }
 
     fun allNames(): List<String> {

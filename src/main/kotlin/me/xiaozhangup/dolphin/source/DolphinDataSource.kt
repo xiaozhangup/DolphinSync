@@ -3,7 +3,7 @@ package me.xiaozhangup.dolphin.source
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
-import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.utils.*
 import me.xiaozhangup.dolphin.utils.obj.PopTimer
 import me.xiaozhangup.dolphin.utils.obj.debug
@@ -43,8 +43,8 @@ class DolphinDataSource : ProfileSource {
                 future.complete(true)
                 debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
 
-                RedisHandle.publish("data:$uuid")
-                debug("[Sync] [Data] Published redis message for ${player.name}")
+                MessageHandle.publish("data", uuid)
+                debug("[Sync] [Data] Published message for ${player.name}")
 
                 if (DolphinSync.settings.backup) {
                     tablePlayerDataBak.insert(uuid, byte) // 备份
@@ -89,7 +89,7 @@ class DolphinDataSource : ProfileSource {
             futureQueues[uuid] = this
         } // 加上对应任务
 
-        submitScope(tag = "data_${player.uniqueId}", period = 5) {
+        submitScope(tag = "data_${player.uniqueId}", period = 4) {
             if (future.isDone) {
                 debug("[Sync] [Data] $uuid loaded in another way (tried $tried times)")
                 cancel()

@@ -75,7 +75,7 @@ fun submitScope(
     period: Long = 0L,
     block: suspend TaskScope.() -> Unit
 ): Job {
-    val job = CoroutineTask.submit(tag, period, block)
+    val job = CoroutineTask.submit(tag, period * 50, block)
     if (CoroutineTask.isForceSync()) runBlocking { job.join() }
     return job
 }

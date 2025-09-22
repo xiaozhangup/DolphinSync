@@ -2,7 +2,7 @@ package me.xiaozhangup.dolphin.source
 
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerAdvancement
-import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.utils.*
 import me.xiaozhangup.dolphin.utils.obj.PopTimer
 import me.xiaozhangup.dolphin.utils.obj.debug
@@ -29,7 +29,7 @@ class DolphinAchievementSource : JsonDataSource {
         submitScope("adv_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
                 tablePlayerAdvancement.saveData(uuid, CompressUtils.compress(json), true) // 存
-                RedisHandle.publish("achievement:$uuid") // 广播
+                MessageHandle.publish("achievement", uuid) // 广播
                 debug("[Sync] [Advancement] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {
