@@ -1,0 +1,24 @@
+database:
+  host: localhost
+  port: 32768
+  user: username
+  password: password
+  database: dolphin
+
+redis:
+  host: localhost
+  port: 6379
+  #  auth: root
+  #  pass: root
+  connect: 32
+  timeout: 1000
+
+settings:
+  debug: false
+  max_tried: 24
+  kick_when_shutdown: true
+  backup: true
+  sync:
+    data: false
+    achievement: false
+    statistic: false
