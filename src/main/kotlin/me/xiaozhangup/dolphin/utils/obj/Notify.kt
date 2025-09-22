@@ -32,6 +32,6 @@ fun logger(message: String, vararg placeholder: Any) {
 
 fun debug(message: String) {
     if (DolphinSync.settings.debug) {
-        info(message)
+        info("[${System.currentTimeMillis()}] $message")
     }
 }
