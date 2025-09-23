@@ -1,13 +1,12 @@
 # DolphinSync
 
-### 项目使用 TabooLib Start Jar 创建!
-### 爱来自枫溪
-
-代码手写，提交信息 AI 写 🤝
-
-## 构建发行版本
-
 发行版本用于正常使用, 不含 TabooLib 本体。
+
+# 项目介绍
+
+Octopus 服务端配套数据同步插件  
+支持所有玩家数据快速无感同步  
+使用 MySQL + Redis 进行同步
 
 ```
 ./gradlew clean build
