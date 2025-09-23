@@ -17,6 +17,7 @@ taboolib {
             BukkitUtil,
             MinecraftChat,
             CommandHelper,
+            AlkaidRedis,
             Database
         )
     }
@@ -30,7 +31,6 @@ taboolib {
     description {
         dependencies {
             name("CarbKotlin")
-            name("SlimeCargoNext")
         }
     }
 
@@ -46,7 +46,6 @@ repositories {
 
 dependencies {
     compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.8-R0.1-SNAPSHOT")
-    compileOnly("me.xiaozhangup:SlimeCargoNext:1.0.1")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 

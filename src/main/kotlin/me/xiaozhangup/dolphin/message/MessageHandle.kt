@@ -1,24 +1,28 @@
 package me.xiaozhangup.dolphin.message
 
+import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
 import me.xiaozhangup.dolphin.source.DolphinDataSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
 import me.xiaozhangup.dolphin.utils.obj.debug
-import me.xiaozhangup.slimecargo.api.SlimeMessengerAPI
-import me.xiaozhangup.slimecargo.api.events.SlimeByteMessageReceivedEvent
-import me.xiaozhangup.slimecargo.utils.byteArray
-import taboolib.common.platform.event.SubscribeEvent
+import taboolib.common.platform.function.info
+import taboolib.expansion.AlkaidRedis
+import taboolib.expansion.SingleRedisConnector
+import taboolib.expansion.fromConfig
 
 object MessageHandle {
     const val CHANNEL = "dolphin_sync"
+    val redisConnection: SingleRedisConnector by lazy {
+        AlkaidRedis.create()
+            .fromConfig(DolphinSync.config.getConfigurationSection("redis")!!)
+            .connect()
+    }
 
-    @SubscribeEvent
-    fun e(e: SlimeByteMessageReceivedEvent) {
-        if (e.prefix == CHANNEL) {
-            val (type, uuid) = byteArray(e.context) {
-                readString() to readString()
-            }
-            debug("[MessageHandle] Received message: $type:$uuid")
+    fun initAlkaidRedis() {
+        val connection = redisConnection.connection()
+        connection.subscribe(CHANNEL, patternMode = false) {
+            debug("[AlkaidRedis] Redis received message: $message")
+            val (type, uuid) = message.split(':', limit = 2) // 通知以及完成保存的类型
             when (type) {
                 "achievement" -> {
                     DolphinAchievementSource.completeIfNeeded(uuid)
@@ -33,15 +37,10 @@ object MessageHandle {
                 }
             }
         }
+        info("[AlkaidRedis] Redis connected")
     }
 
     fun publish(type: String, uuid: String) {
-        SlimeMessengerAPI.broadcast(
-            CHANNEL,
-            byteArray {
-                writeString(type)
-                writeString(uuid)
-            }
-        )
+        redisConnection.connection().publish(CHANNEL, "$type:$uuid")
     }
 }
