@@ -5,6 +5,12 @@ database:
   password: password
   database: dolphin
 
+redis:
+  host: localhost
+  port: 3306
+  pass: password
+  connect: 32
+
 settings:
   debug: false
   max_tried: 24
@@ -12,5 +18,6 @@ settings:
   backup: true
   sync:
     data: false
+    map: false
     achievement: false
     statistic: false
