@@ -1,9 +1,10 @@
 package me.xiaozhangup.dolphin
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer
-import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
 import me.xiaozhangup.dolphin.source.DolphinDataSource
+import me.xiaozhangup.dolphin.source.DolphinMapSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
 import me.xiaozhangup.dolphin.utils.obj.CoroutineTask
 import org.bukkit.Bukkit
@@ -28,11 +29,15 @@ object DolphinSync : Plugin() {
         info("[Config] Loaded! $settings")
 
         DatabaseContainer.initContainer()
-        RedisHandle.initAlkaidRedis()
+        MessageHandle.initAlkaidRedis()
 
         if (settings.syncData) {
             Bukkit.getServer().setProfileSource(DolphinDataSource())
             info("[Sync] Data Sync Enabled!")
+        }
+        if (settings.syncMap) {
+            Bukkit.getServer().setMapSource(DolphinMapSource())
+            info("[Sync] Map Sync Enabled!")
         }
         if (settings.syncAchievement) {
             Bukkit.getServer().setAchievementsSource(DolphinAchievementSource())
@@ -51,6 +56,8 @@ object DolphinSync : Plugin() {
                 currentTimeMillis() - TimeUnit.DAYS.toMillis(30) // 30 天钱的数据不要了
             )
         }
+        info("[Sync] Old backups cleaned!")
+
         Bukkit.getOnlinePlayers().forEach {
             it.saveData() // 无论如何都是要保存的
 
@@ -60,6 +67,13 @@ object DolphinSync : Plugin() {
                 DolphinAchievementSource.addQuitedPlayer(uuid)
                 it.kick(Bukkit.getServer().shutdownMessage())
             }
+        }
+        info("[Sync] All players' data saved!")
+
+        MessageHandle.redisConnection.close()
+        if (settings.syncMap) {
+            Bukkit.getWorld("world")!!.save(true)
+            info("[Sync] World map data saved!")
         }
     }
 }

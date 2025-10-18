@@ -1,6 +1,7 @@
 package me.xiaozhangup.dolphin.data
 
 import me.xiaozhangup.dolphin.DolphinSync.config
+import me.xiaozhangup.dolphin.data.table.TableMapData
 import me.xiaozhangup.dolphin.data.table.TablePlayerAdvancement
 import me.xiaozhangup.dolphin.data.table.TablePlayerData
 import me.xiaozhangup.dolphin.data.table.TablePlayerDataBak
@@ -36,6 +37,9 @@ object DatabaseContainer {
     lateinit var tablePlayerStatistic: TablePlayerStatistic
         private set
 
+    lateinit var tableMapData: TableMapData
+        private set
+
     private val databaseConfig: ConfigurationSection by lazy {
         config.getConfigurationSection("database")
             ?: throw RuntimeException("Config 'database' does not exist.")
@@ -49,6 +53,7 @@ object DatabaseContainer {
         tablePlayerDataBak = TablePlayerDataBak().apply { createTable() }
         tablePlayerAdvancement = TablePlayerAdvancement().apply { createTable() }
         tablePlayerStatistic = TablePlayerStatistic().apply { createTable() }
+        tableMapData = TableMapData().apply { createTable() }
 
         debug("[Data] Database container started")
     }

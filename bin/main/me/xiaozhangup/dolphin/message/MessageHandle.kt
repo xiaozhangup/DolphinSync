@@ -1,16 +1,16 @@
-package me.xiaozhangup.dolphin.redis
+package me.xiaozhangup.dolphin.message
 
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
 import me.xiaozhangup.dolphin.source.DolphinDataSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
-import taboolib.common.platform.function.debug
+import me.xiaozhangup.dolphin.utils.obj.debug
 import taboolib.common.platform.function.info
 import taboolib.expansion.AlkaidRedis
 import taboolib.expansion.SingleRedisConnector
 import taboolib.expansion.fromConfig
 
-object RedisHandle {
+object MessageHandle {
     const val CHANNEL = "dolphin_sync"
     val redisConnection: SingleRedisConnector by lazy {
         AlkaidRedis.create()
@@ -40,7 +40,7 @@ object RedisHandle {
         info("[AlkaidRedis] Redis connected")
     }
 
-    fun publish(msg: String) {
-        redisConnection.connection().publish(CHANNEL, msg)
+    fun publish(type: String, uuid: String) {
+        redisConnection.connection().publish(CHANNEL, "$type:$uuid")
     }
 }

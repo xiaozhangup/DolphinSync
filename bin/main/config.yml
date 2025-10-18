@@ -7,11 +7,9 @@ database:
 
 redis:
   host: localhost
-  port: 6379
-  #  auth: root
-  #  pass: root
+  port: 3306
+  pass: password
   connect: 32
-  timeout: 1000
 
 settings:
   debug: false
@@ -20,5 +18,6 @@ settings:
   backup: true
   sync:
     data: false
+    map: false
     achievement: false
     statistic: false

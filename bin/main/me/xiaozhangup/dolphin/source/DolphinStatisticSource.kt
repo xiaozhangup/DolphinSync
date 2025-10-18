@@ -2,7 +2,7 @@ package me.xiaozhangup.dolphin.source
 
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerStatistic
-import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.utils.*
 import me.xiaozhangup.dolphin.utils.obj.PopTimer
 import me.xiaozhangup.dolphin.utils.obj.debug
@@ -29,7 +29,7 @@ class DolphinStatisticSource : JsonDataSource {
         submitScope("static_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
                 tablePlayerStatistic.saveData(uuid, CompressUtils.compress(json), true) // 存
-                RedisHandle.publish("statistic:$uuid") // 广播
+                MessageHandle.publish("statistic", uuid) // 广播
                 debug("[Sync] [Statistic] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {

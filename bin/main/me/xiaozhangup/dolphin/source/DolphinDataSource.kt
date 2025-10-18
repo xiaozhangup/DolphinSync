@@ -3,7 +3,7 @@ package me.xiaozhangup.dolphin.source
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
-import me.xiaozhangup.dolphin.redis.RedisHandle
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.utils.*
 import me.xiaozhangup.dolphin.utils.obj.PopTimer
 import me.xiaozhangup.dolphin.utils.obj.debug
@@ -43,8 +43,8 @@ class DolphinDataSource : ProfileSource {
                 future.complete(true)
                 debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
 
-                RedisHandle.publish("data:$uuid")
-                debug("[Sync] [Data] Published redis message for ${player.name}")
+                MessageHandle.publish("data", uuid)
+                debug("[Sync] [Data] Published message for ${player.name}")
 
                 if (DolphinSync.settings.backup) {
                     tablePlayerDataBak.insert(uuid, byte) // 备份

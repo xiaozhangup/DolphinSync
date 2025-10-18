@@ -5,6 +5,7 @@ import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerStatisticMigrate
+import me.xiaozhangup.dolphin.source.migrate.WorldMapMigrate
 import me.xiaozhangup.dolphin.utils.BackupFilter
 import me.xiaozhangup.dolphin.utils.obj.notify
 import me.xiaozhangup.dolphin.utils.obj.submitScope
@@ -176,6 +177,15 @@ object DolphinCommand {
                         sender.notify("正在迁移玩家基本数据...")
                         submitScope {
                             PlayerDataMigrate.migrate(sender)
+                        }
+                    }
+                }
+
+                literal("map") {
+                    execute<CommandSender> { sender, _, _ ->
+                        sender.notify("正在迁移世界地图数据...")
+                        submitScope {
+                            WorldMapMigrate.migrate(sender)
                         }
                     }
                 }

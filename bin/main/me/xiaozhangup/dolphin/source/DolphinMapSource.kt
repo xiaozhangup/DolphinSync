@@ -1,23 +1,13 @@
 package me.xiaozhangup.dolphin.source
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tableMapData
-import me.xiaozhangup.dolphin.utils.Debouncer
 import me.xiaozhangup.dolphin.utils.obj.debug
 import me.xiaozhangup.dolphin.utils.obj.logger
 import me.xiaozhangup.dolphin.utils.obj.submitScope
 import me.xiaozhangup.octopus.MapSource
-import org.bukkit.Bukkit
-import taboolib.common.platform.function.submit
-import taboolib.common.platform.service.PlatformExecutor
 import java.util.*
 
 class DolphinMapSource : MapSource {
-
-    private val debouncer = Debouncer(200)
-    private var worldSave: PlatformExecutor.PlatformTask? = null
-    private val overworld by lazy {
-        Bukkit.getWorld("world")!!
-    }
 
     init {
         logger("DolphinMapSource 已启用")
@@ -39,20 +29,12 @@ class DolphinMapSource : MapSource {
         return Optional.of(value)
     }
 
-    override fun saveMapData(id: Int, data: ByteArray) {
+    override fun saveMapData(id: Int, data: ByteArray): Boolean {
         val rid = id + 1
         submitScope("map_$rid") {
             tableMapData.saveMap(rid, data)
             debug("[Sync] [Map] Saved map $id data, size: ${data.size}")
         }
-    }
-
-    override fun setDirty(mapId: Int) {
-        debouncer.submit("map_$mapId") {
-            worldSave?.cancel()
-            worldSave = submit(delay = 10) {
-                overworld.save()
-            }
-        }
+        return true
     }
 }
