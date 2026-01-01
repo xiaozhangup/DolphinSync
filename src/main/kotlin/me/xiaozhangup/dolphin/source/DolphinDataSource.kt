@@ -63,14 +63,12 @@ class DolphinDataSource : ProfileSource {
         return future.get()
     }
 
-    override fun load(player: Player): Optional<ByteArray> {
-        val uuid = player.uniqueId.toString()
-
+    override fun load(username: String, uuid: String): Optional<ByteArray> {
         if (!tablePlayerData.hasData(uuid)) {
-            submitScope("data_${player.uniqueId}") {
+            submitScope("data_${uuid}") {
                 tablePlayerData.insert(
                     uuid,
-                    player.name,
+                    username,
                     currentTimeMillis(),
                     true,
                     byteArrayOf()
@@ -89,7 +87,7 @@ class DolphinDataSource : ProfileSource {
             futureQueues[uuid] = this
         } // 加上对应任务
 
-        submitScope(tag = "data_${player.uniqueId}", period = 4) {
+        submitScope(tag = "data_${uuid}", period = 4) {
             if (future.isDone) {
                 debug("[Sync] [Data] $uuid loaded in another way (tried $tried times)")
                 cancel()
@@ -115,10 +113,6 @@ class DolphinDataSource : ProfileSource {
         }
 
         return Optional.of(future.get())
-    }
-
-    override fun load(player: String, username: String): Optional<ByteArray> {
-        return Optional.ofNullable(tablePlayerData.getData(player, username, false))
     }
 
     companion object : Listener {

@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.23"
+    id("io.izzel.taboolib") version "2.0.27"
     kotlin("jvm") version "2.1.21"
 }
 
@@ -22,7 +22,7 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.2.3-test-17"
+        taboolib = "6.2.4-test-12-23-1"
         coroutines = "1.10.2"
         skipKotlinRelocate = true
         skipKotlin = true
@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.8-R0.1-SNAPSHOT")
+    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 
