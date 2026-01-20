@@ -22,7 +22,7 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.2.4-test-12-23-1"
+        taboolib = "6.2.4-5902762"
         coroutines = "1.10.2"
         skipKotlinRelocate = true
         skipKotlin = true

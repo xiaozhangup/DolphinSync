@@ -112,7 +112,12 @@ class DolphinDataSource : ProfileSource {
             }
         }
 
-        return Optional.of(future.get())
+        val bytes = future.get()
+        return if (bytes.isEmpty()) {
+            Optional.empty()
+        } else {
+            Optional.of(bytes)
+        }
     }
 
     companion object : Listener {
