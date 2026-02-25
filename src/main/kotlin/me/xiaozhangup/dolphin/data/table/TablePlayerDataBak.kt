@@ -37,6 +37,7 @@ class TablePlayerDataBak : SQLTable {
 
     fun getBackup(uuid: String, timestamp: Long): ByteArray? {
         return table.select(dataSource) {
+            rows("data")
             where {
                 "uuid" eq uuid
                 "modified" eq timestamp
@@ -48,6 +49,7 @@ class TablePlayerDataBak : SQLTable {
 
     fun allBackups(uuid: String): List<Long> {
         val result = table.select(dataSource) {
+            rows("modified")
             where("uuid" eq uuid)
         }.map {
             getLong("modified")

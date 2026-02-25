@@ -20,6 +20,7 @@ class TableMapData : SQLTable {
     fun nextIndex() : Int {
         var mapId = 0
         table.select(dataSource) {
+            rows("map_id")
             orderBy("map_id", Order.Type.DESC)
             limit(1)
         }.firstOrNull {
@@ -37,6 +38,7 @@ class TableMapData : SQLTable {
             value(data)
         }
         table.select(dataSource) {
+            rows("map_id")
             orderBy("map_id", Order.Type.DESC)
             limit(1)
         }.first {
@@ -62,6 +64,7 @@ class TableMapData : SQLTable {
 
     fun getMap(id: Int) : ByteArray? {
         val result = table.select(dataSource) {
+            rows("data")
             where("map_id" eq id)
         }.firstOrNull {
             getBytes("data")

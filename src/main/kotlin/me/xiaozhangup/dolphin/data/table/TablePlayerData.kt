@@ -93,6 +93,7 @@ class TablePlayerData : SQLTable {
 
     fun isLocked(uuid: String): Boolean {
         return table.select(dataSource) {
+            rows("lock")
             where("uuid" eq uuid)
         }.firstOrNull {
             getLong("lock") > 0
@@ -100,13 +101,14 @@ class TablePlayerData : SQLTable {
     }
 
     fun hasData(uuid: String): Boolean {
-        return table.select(dataSource) {
+        return table.find(dataSource) {
             where("uuid" eq uuid)
-        }.firstOrNull {} != null
+        }
     }
 
     fun lastModified(uuid: String): Long {
         return table.select(dataSource) {
+            rows("modified")
             where("uuid" eq uuid)
         }.firstOrNull { getLong("modified") } ?: -1
     }
@@ -116,6 +118,7 @@ class TablePlayerData : SQLTable {
         useLock: Boolean = true
     ): ByteArray? {
         val result = table.select(dataSource) {
+            rows("data")
             where("uuid" eq uuid)
             if (useLock) {
                 where("lock" eq 0)
@@ -133,6 +136,7 @@ class TablePlayerData : SQLTable {
         useLock: Boolean = true
     ): ByteArray? {
         val result = table.select(dataSource) {
+            rows("data")
             where("uuid" eq uuid)
             where("name" eq name)
             if (useLock) {
@@ -152,6 +156,7 @@ class TablePlayerData : SQLTable {
         var result: ByteArray? = null
         val success = table.transaction(dataSource) {
             select {
+                rows("data")
                 where("uuid" eq uuid)
                 if (useLock) {
                     where("lock" eq 0)
@@ -169,13 +174,16 @@ class TablePlayerData : SQLTable {
     }
 
     fun allNames(): List<String> {
-        return table.select(dataSource) { }.map {
+        return table.select(dataSource) {
+            rows("name")
+        }.map {
             getString("name")
         }
     }
 
     fun getNameByUUID(uuid: String): String? {
         return table.select(dataSource) {
+            rows("name")
             where("uuid" eq uuid)
         }.firstOrNull {
             getString("name")
@@ -184,6 +192,7 @@ class TablePlayerData : SQLTable {
 
     fun getUUIDByName(name: String): String? {
         return table.select(dataSource) {
+            rows("uuid")
             where("name" eq name)
         }.firstOrNull {
             getString("uuid")

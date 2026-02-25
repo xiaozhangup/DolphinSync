@@ -64,13 +64,14 @@ class TablePlayerAdvancement : SQLTable {
     }
 
     fun hasData(uuid: String): Boolean {
-        return table.select(dataSource) {
+        return table.find(dataSource) {
             where("uuid" eq uuid)
-        }.firstOrNull {} != null
+        }
     }
 
     fun lastModified(uuid: String): Long {
         return table.select(dataSource) {
+            rows("modified")
             where("uuid" eq uuid)
         }.firstOrNull { getLong("modified") } ?: -1
     }
@@ -80,6 +81,7 @@ class TablePlayerAdvancement : SQLTable {
         nullWhenLocked: Boolean = true
     ): ByteArray? {
         val result = table.select(dataSource) {
+            rows("data")
             where("uuid" eq uuid)
             if (nullWhenLocked) {
                 where("lock" eq 0)
