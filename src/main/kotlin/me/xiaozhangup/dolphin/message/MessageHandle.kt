@@ -59,6 +59,21 @@ object MessageHandle {
         debug("[AlkaidRedis] Cached $type data for $uuid (TTL ${CACHE_TTL}s)")
     }
 
+    fun invalidateCache(type: String, uuid: String): Boolean {
+        val key = "$CACHE_PREFIX:$type:$uuid"
+        val deleted = (redisConnection.connection().eval(
+            "return redis.call('del', KEYS[1])",
+            listOf(key),
+            emptyList()
+        ) as? Number)?.toLong() ?: 0L
+        if (deleted > 0L) {
+            debug("[AlkaidRedis] Cache invalidated for $type:$uuid")
+            return true
+        }
+        debug("[AlkaidRedis] No cache to invalidate for $type:$uuid")
+        return false
+    }
+
     fun getAndInvalidateCache(type: String, uuid: String): ByteArray? {
         val result = redisConnection.connection().eval(
             "local v = redis.call('get', KEYS[1]); if v ~= false then redis.call('del', KEYS[1]) end; return v",

@@ -14,6 +14,7 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import java.lang.System.currentTimeMillis
 import java.util.*
@@ -80,13 +81,13 @@ class DolphinDataSource : ProfileSource {
 
         val timer = PopTimer()
         var tried = 0
-        val future = CompletableFuture<ByteArray>().apply {
-            thenAccept {
-                futureQueues.remove(uuid)
-                debug("[Sync] [Data] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
+        val future = futureQueues.getOrPut(uuid) {
+            CompletableFuture<ByteArray>().apply {
+                thenAccept {
+                    debug("[Sync] [Data] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
+                }
             }
-            futureQueues[uuid] = this
-        } // 加上对应任务
+        } // 加上或者复用对应任务
 
         submitScope(tag = "data_${uuid}", period = 4) {
             if (future.isDone) {
@@ -126,7 +127,17 @@ class DolphinDataSource : ProfileSource {
 
         @EventHandler
         fun e(e: PlayerQuitEvent) {
-            e.player.vehicle?.removePassenger(e.player)
+            val player = e.player
+            player.vehicle?.removePassenger(player)
+            futureQueues.remove(player.uniqueId.toString())
+        }
+
+        @EventHandler
+        fun e(e: PlayerJoinEvent) {
+            val player = e.player
+            val uuid = player.uniqueId.toString()
+            MessageHandle.invalidateCache("data", uuid)
+            futureQueues.remove(uuid)
         }
 
         fun completeIfNeeded(uuid: String) {
