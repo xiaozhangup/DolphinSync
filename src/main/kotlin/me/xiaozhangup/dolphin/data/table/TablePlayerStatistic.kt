@@ -6,6 +6,7 @@ import taboolib.module.database.*
 import java.lang.System.currentTimeMillis
 
 class TablePlayerStatistic : SQLTable {
+    // Hot table: lightweight metadata columns
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_statistic", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {
@@ -20,23 +21,39 @@ class TablePlayerStatistic : SQLTable {
         add("lock") {
             type(ColumnTypeSQL.BIGINT)
         }
+    }
+
+    // Cold table: BLOB data only
+    val blobTable: Table<Host<SQL>, SQL> = Table("dolphin_statistic_blob", DatabaseContainer.host) {
+        add("uuid") {
+            type(ColumnTypeSQL.VARCHAR, 36) {
+                options(ColumnOptionSQL.PRIMARY_KEY, ColumnOptionSQL.UNIQUE_KEY)
+            }
+        }
 
         add("data") {
             type(ColumnTypeSQL.MEDIUMBLOB)
         }
     }
 
+    override fun createTable() {
+        table.createTable(dataSource)
+        blobTable.createTable(dataSource)
+    }
+
     fun insert(uuid: String, modified: Long, lock: Boolean = false, data: ByteArray) {
         table.insert(
             dataSource,
-            "uuid", "modified", "lock", "data"
+            "uuid", "modified", "lock"
         ) {
             value(
                 uuid,
                 modified,
-                if (lock) currentTimeMillis() else 0,
-                data
+                if (lock) currentTimeMillis() else 0
             )
+        }
+        blobTable.insert(dataSource, "uuid", "data") {
+            value(uuid, data)
         }
     }
 
@@ -45,10 +62,12 @@ class TablePlayerStatistic : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        blobTable.update(dataSource) {
+            where("uuid" eq uuid)
+            set("data", data)
+        }
         table.update(dataSource) {
             where("uuid" eq uuid)
-
-            set("data", data)
             set("modified", currentTimeMillis())
             if (unlock) {
                 set("lock", 0)
@@ -80,16 +99,19 @@ class TablePlayerStatistic : SQLTable {
         uuid: String,
         nullWhenLocked: Boolean = true
     ): ByteArray? {
-        val result = table.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-            if (nullWhenLocked) {
+        if (nullWhenLocked) {
+            val unlocked = table.find(dataSource) {
+                where("uuid" eq uuid)
                 where("lock" eq 0)
             }
+            if (!unlocked) return null
+        }
+
+        return blobTable.select(dataSource) {
+            rows("data")
+            where("uuid" eq uuid)
         }.firstOrNull {
             getBytes("data")
         }
-
-        return result
     }
 }
