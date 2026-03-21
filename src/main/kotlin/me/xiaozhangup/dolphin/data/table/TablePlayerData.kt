@@ -6,7 +6,6 @@ import taboolib.module.database.*
 import java.lang.System.currentTimeMillis
 
 class TablePlayerData : SQLTable {
-    // Hot table: lightweight metadata columns
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_data", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {
@@ -27,7 +26,6 @@ class TablePlayerData : SQLTable {
         }
     }
 
-    // Cold table: BLOB data only
     val blobTable: Table<Host<SQL>, SQL> = Table("dolphin_data_blob", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {
