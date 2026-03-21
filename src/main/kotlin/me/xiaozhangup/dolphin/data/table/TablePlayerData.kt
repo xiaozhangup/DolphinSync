@@ -6,6 +6,7 @@ import taboolib.module.database.*
 import java.lang.System.currentTimeMillis
 
 class TablePlayerData : SQLTable {
+    // Hot table: lightweight metadata columns
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_data", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {
@@ -24,10 +25,24 @@ class TablePlayerData : SQLTable {
         add("lock") {
             type(ColumnTypeSQL.BIGINT)
         }
+    }
+
+    // Cold table: BLOB data only
+    val blobTable: Table<Host<SQL>, SQL> = Table("dolphin_data_blob", DatabaseContainer.host) {
+        add("uuid") {
+            type(ColumnTypeSQL.VARCHAR, 36) {
+                options(ColumnOptionSQL.PRIMARY_KEY, ColumnOptionSQL.UNIQUE_KEY)
+            }
+        }
 
         add("data") {
             type(ColumnTypeSQL.MEDIUMBLOB)
         }
+    }
+
+    override fun createTable() {
+        table.createTable(dataSource)
+        blobTable.createTable(dataSource)
     }
 
     fun insert(
@@ -39,15 +54,17 @@ class TablePlayerData : SQLTable {
     ) {
         table.insert(
             dataSource,
-            "uuid", "name", "modified", "lock", "data"
+            "uuid", "name", "modified", "lock"
         ) {
             value(
                 uuid,
                 name,
                 modified,
-                if (lock) currentTimeMillis() else 0,
-                data
+                if (lock) currentTimeMillis() else 0
             )
+        }
+        blobTable.insert(dataSource, "uuid", "data") {
+            value(uuid, data)
         }
     }
 
@@ -60,10 +77,12 @@ class TablePlayerData : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        blobTable.update(dataSource) {
+            where("uuid" eq uuid)
+            set("data", data)
+        }
         table.update(dataSource) {
             where("uuid" eq uuid)
-
-            set("data", data)
             set("modified", currentTimeMillis())
             if (unlock) {
                 set("lock", 0)
@@ -77,12 +96,14 @@ class TablePlayerData : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
+        blobTable.update(dataSource) {
+            where("uuid" eq uuid)
+            set("data", data)
+        }
         table.update(dataSource) {
             where {
                 "uuid" eq uuid
             }
-
-            set("data", data)
             set("modified", currentTimeMillis())
             set("name", name)
             if (unlock) {
@@ -117,17 +138,20 @@ class TablePlayerData : SQLTable {
         uuid: String,
         useLock: Boolean = true
     ): ByteArray? {
-        val result = table.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-            if (useLock) {
+        if (useLock) {
+            val unlocked = table.find(dataSource) {
+                where("uuid" eq uuid)
                 where("lock" eq 0)
             }
+            if (!unlocked) return null
+        }
+
+        return blobTable.select(dataSource) {
+            rows("data")
+            where("uuid" eq uuid)
         }.firstOrNull {
             getBytes("data")
         }
-
-        return result
     }
 
     fun getData(
@@ -135,34 +159,37 @@ class TablePlayerData : SQLTable {
         name: String,
         useLock: Boolean = true
     ): ByteArray? {
-        val result = table.select(dataSource) {
-            rows("data")
+        val exists = table.find(dataSource) {
             where("uuid" eq uuid)
             where("name" eq name)
             if (useLock) {
                 where("lock" eq 0)
             }
+        }
+        if (!exists) return null
+
+        return blobTable.select(dataSource) {
+            rows("data")
+            where("uuid" eq uuid)
         }.firstOrNull {
             getBytes("data")
         }
-
-        return result
     }
 
     fun getDataAndLock(
         uuid: String,
         useLock: Boolean = true
-    ) : ByteArray? {
-        var result: ByteArray? = null
+    ): ByteArray? {
+        var rowFound = false
         val success = table.transaction(dataSource) {
             select {
-                rows("data")
+                rows("uuid")
                 where("uuid" eq uuid)
                 if (useLock) {
                     where("lock" eq 0)
                 }
             }.firstOrNull {
-                result = getBytes("data")
+                rowFound = true
             }
 
             update {
@@ -170,7 +197,15 @@ class TablePlayerData : SQLTable {
                 set("lock", currentTimeMillis())
             }
         }.isSuccess
-        return if (success) result else null
+
+        if (!success || !rowFound) return null
+
+        return blobTable.select(dataSource) {
+            rows("data")
+            where("uuid" eq uuid)
+        }.firstOrNull {
+            getBytes("data")
+        }
     }
 
     fun allNames(): List<String> {
