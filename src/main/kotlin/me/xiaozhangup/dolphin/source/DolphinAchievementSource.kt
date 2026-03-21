@@ -28,8 +28,10 @@ class DolphinAchievementSource : JsonDataSource {
         val timer = PopTimer()
         submitScope("adv_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
-                tablePlayerAdvancement.saveData(uuid, CompressUtils.compress(json), true) // 存
+                val compressed = CompressUtils.compress(json)
+                MessageHandle.cacheData("achievement", uuid, compressed)
                 MessageHandle.publish("achievement", uuid) // 广播
+                tablePlayerAdvancement.saveData(uuid, compressed, true) // 存
                 debug("[Sync] [Advancement] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
             } else {
@@ -102,9 +104,19 @@ class DolphinAchievementSource : JsonDataSource {
 
         fun completeIfNeeded(uuid: String) {
             val future = futureQueues[uuid] ?: return
-            future.complete(
-                tablePlayerAdvancement.getData(uuid, false)
-            )
+            val cached = MessageHandle.getAndInvalidateCache("achievement", uuid)
+            if (cached != null) {
+                future.complete(cached)
+                debug("[Sync] [Advancement] Data loaded from cache for $uuid")
+            } else {
+                val data = tablePlayerAdvancement.getData(uuid)
+                if (data != null) {
+                    future.complete(data)
+                    debug("[Sync] [Advancement] Data loaded from database for $uuid (redis)")
+                } else {
+                    debug("[Sync] [Advancement] No data loaded from cache for $uuid (redis)")
+                }
+            }
         }
 
         fun addQuitedPlayer(uuid: String) {
