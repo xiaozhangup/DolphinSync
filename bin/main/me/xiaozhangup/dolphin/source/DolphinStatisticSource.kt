@@ -28,7 +28,9 @@ class DolphinStatisticSource : JsonDataSource {
         val timer = PopTimer()
         submitScope("static_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出
-                tablePlayerStatistic.saveData(uuid, CompressUtils.compress(json), true) // 存
+                val compressed = CompressUtils.compress(json)
+                tablePlayerStatistic.saveData(uuid, compressed, true) // 存
+                MessageHandle.cacheData("statistic", uuid, compressed)
                 MessageHandle.publish("statistic", uuid) // 广播
                 debug("[Sync] [Statistic] $uuid saved and unlocked (in ${timer.pop()}ms)")
                 return@submitScope
@@ -102,9 +104,12 @@ class DolphinStatisticSource : JsonDataSource {
 
         fun completeIfNeeded(uuid: String) {
             val future = futureQueues[uuid] ?: return
-            future.complete(
-                tablePlayerStatistic.getData(uuid, false)
-            )
+            val cached = MessageHandle.getAndInvalidateCache("statistic", uuid)
+            if (cached != null) {
+                future.complete(cached)
+            } else {
+                future.complete(tablePlayerStatistic.getData(uuid, false))
+            }
         }
 
         fun addQuitedPlayer(uuid: String) {

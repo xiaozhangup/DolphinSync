@@ -43,6 +43,7 @@ class DolphinDataSource : ProfileSource {
                 future.complete(true)
                 debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
 
+                MessageHandle.cacheData("data", uuid, byte)
                 MessageHandle.publish("data", uuid)
                 debug("[Sync] [Data] Published message for ${player.name}")
 
@@ -129,9 +130,13 @@ class DolphinDataSource : ProfileSource {
         }
 
         fun completeIfNeeded(uuid: String) {
-            futureQueues[uuid]?.complete(
-                tablePlayerData.getData(uuid, false)
-            )
+            val future = futureQueues[uuid] ?: return
+            val cached = MessageHandle.getAndInvalidateCache("data", uuid)
+            if (cached != null) {
+                future.complete(cached)
+            } else {
+                future.complete(tablePlayerData.getData(uuid, false))
+            }
         }
     }
 }
