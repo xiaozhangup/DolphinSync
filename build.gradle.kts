@@ -46,6 +46,7 @@ repositories {
 
 dependencies {
     compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("redis.clients:jedis:5.1.0")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 

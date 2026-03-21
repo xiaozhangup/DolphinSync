@@ -4,7 +4,7 @@ import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.message.MessageHandle
-import me.xiaozhangup.dolphin.utils.*
+import me.xiaozhangup.dolphin.utils.BackupFilter
 import me.xiaozhangup.dolphin.utils.obj.PopTimer
 import me.xiaozhangup.dolphin.utils.obj.debug
 import me.xiaozhangup.dolphin.utils.obj.logger
@@ -29,23 +29,23 @@ class DolphinDataSource : ProfileSource {
 
     override fun save(player: Player, byte: ByteArray): Boolean {
         val timer = PopTimer()
-        val future = CompletableFuture<Boolean>()
-        submitScope("data_${player.uniqueId}") {
-            val uuid = player.uniqueId.toString()
-            val connected = player.clientConnected()
-            debug("[Sync] [Data] Saving for ${player.name}... (Connected: $connected)")
-            if (connected) {
-                tablePlayerData.saveData(uuid, byte)
-                future.complete(true)
-                debug("[Sync] [Data] Saved for ${player.name} (in ${timer.pop()}ms)")
-            } else {
-                tablePlayerData.saveData(uuid, player.name, byte, true)
-                future.complete(true)
-                debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
+        val uuid = player.uniqueId.toString()
+        val connected = player.clientConnected()
+        debug("[Sync] [Data] Saving for ${player.name}... (Connected: $connected)")
 
-                MessageHandle.cacheData("data", uuid, byte)
-                MessageHandle.publish("data", uuid)
-                debug("[Sync] [Data] Published message for ${player.name}")
+        if (connected) {
+            submitScope("data_${player.uniqueId}") {
+                tablePlayerData.saveData(uuid, byte)
+                debug("[Sync] [Data] Saved for ${player.name} (in ${timer.pop()}ms)")
+            }
+        } else {
+            MessageHandle.cacheData("data", uuid, byte)
+            MessageHandle.publish("data", uuid)
+            debug("[Sync] [Data] Published message for ${player.name} (in ${timer.pop()}ms)")
+
+            submitScope("data_${player.uniqueId}") {
+                tablePlayerData.saveData(uuid, player.name, byte, true)
+                debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
 
                 if (DolphinSync.settings.backup) {
                     tablePlayerDataBak.insert(uuid, byte) // 备份
@@ -61,7 +61,7 @@ class DolphinDataSource : ProfileSource {
             }
         }
 
-        return future.get()
+        return true
     }
 
     override fun load(username: String, uuid: String): Optional<ByteArray> {
@@ -94,7 +94,7 @@ class DolphinDataSource : ProfileSource {
                 cancel()
                 return@submitScope
             }
-            if (tried > DolphinSync.settings.maxTried) { // 给他 1.2s 时间
+            if (tried > DolphinSync.settings.maxTried) { // 限制重试次数
                 future.complete(
                     tablePlayerData.getDataAndLock(uuid, false) // 强制读取
                 )
@@ -134,8 +134,15 @@ class DolphinDataSource : ProfileSource {
             val cached = MessageHandle.getAndInvalidateCache("data", uuid)
             if (cached != null) {
                 future.complete(cached)
+                debug("[Sync] [Data] Data loaded from cache for $uuid (redis)")
             } else {
-                future.complete(tablePlayerData.getData(uuid, false))
+                val data = tablePlayerData.getData(uuid)
+                if (data != null) {
+                    future.complete(data)
+                    debug("[Sync] [Data] Data loaded from database for $uuid (redis)")
+                } else {
+                    debug("[Sync] [Data] No data loaded from cache for $uuid (redis)")
+                }
             }
         }
     }
