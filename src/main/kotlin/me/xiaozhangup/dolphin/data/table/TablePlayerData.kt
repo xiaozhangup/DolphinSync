@@ -3,6 +3,7 @@ package me.xiaozhangup.dolphin.data.table
 import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
 import taboolib.module.database.*
+import java.sql.Connection
 import java.lang.System.currentTimeMillis
 
 class TablePlayerData : SQLTable {
@@ -41,6 +42,60 @@ class TablePlayerData : SQLTable {
     override fun createTable() {
         table.createTable(dataSource)
         blobTable.createTable(dataSource)
+    }
+
+    fun migrateLegacyDataToBlob(dropLegacyDataColumn: Boolean = false): Int {
+        return dataSource.connection.use { connection ->
+            if (!hasLegacyDataColumn(connection, "dolphin_data")) {
+                return@use 0
+            }
+
+            connection.autoCommit = false
+            try {
+                val migrated = connection.prepareStatement(
+                    """
+                    INSERT INTO dolphin_data_blob (uuid, data)
+                    SELECT uuid, data FROM dolphin_data
+                    WHERE data IS NOT NULL
+                    ON DUPLICATE KEY UPDATE data = VALUES(data)
+                    """.trimIndent()
+                ).use {
+                    it.executeUpdate()
+                }
+
+                if (dropLegacyDataColumn) {
+                    connection.createStatement().use {
+                        it.executeUpdate("ALTER TABLE dolphin_data DROP COLUMN data")
+                    }
+                }
+
+                connection.commit()
+                migrated
+            } catch (ex: Throwable) {
+                connection.rollback()
+                throw ex
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+    }
+
+    private fun hasLegacyDataColumn(connection: Connection, tableName: String): Boolean {
+        return connection.prepareStatement(
+            """
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND COLUMN_NAME = 'data'
+            LIMIT 1
+            """.trimIndent()
+        ).use {
+            it.setString(1, tableName)
+            it.executeQuery().use { resultSet ->
+                resultSet.next()
+            }
+        }
     }
 
     fun insert(
