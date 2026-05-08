@@ -4,7 +4,6 @@ import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
 import taboolib.module.database.*
 import java.lang.System.currentTimeMillis
-import java.sql.Connection
 
 class TablePlayerAdvancement : SQLTable {
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_advancement", DatabaseContainer.host) {
@@ -40,73 +39,30 @@ class TablePlayerAdvancement : SQLTable {
         blobTable.createTable(dataSource)
     }
 
-    fun migrateLegacyDataToBlob(dropLegacyDataColumn: Boolean = false): Int {
-        return dataSource.connection.use { connection ->
-            if (!hasLegacyDataColumn(connection, "dolphin_advancement")) {
-                return@use 0
-            }
-
-            connection.autoCommit = false
-            try {
-                val migrated = connection.prepareStatement(
-                    """
-                    INSERT INTO dolphin_advancement_blob (uuid, data)
-                    SELECT uuid, data FROM dolphin_advancement
-                    WHERE data IS NOT NULL
-                    ON DUPLICATE KEY UPDATE data = VALUES(data)
-                    """.trimIndent()
-                ).use {
-                    it.executeUpdate()
-                }
-
-                if (dropLegacyDataColumn) {
-                    connection.createStatement().use {
-                        it.executeUpdate("ALTER TABLE dolphin_advancement DROP COLUMN data")
-                    }
-                }
-
-                connection.commit()
-                migrated
-            } catch (ex: Throwable) {
-                connection.rollback()
-                throw ex
-            } finally {
-                connection.autoCommit = true
-            }
-        }
-    }
-
-    private fun hasLegacyDataColumn(connection: Connection, tableName: String): Boolean {
-        return connection.prepareStatement(
-            """
-            SELECT 1
-            FROM information_schema.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = ?
-              AND COLUMN_NAME = 'data'
-            LIMIT 1
-            """.trimIndent()
-        ).use {
-            it.setString(1, tableName)
-            it.executeQuery().use { resultSet ->
-                resultSet.next()
-            }
-        }
-    }
-
     fun insert(uuid: String, modified: Long, lock: Boolean = false, data: ByteArray) {
-        table.insert(
-            dataSource,
-            "uuid", "modified", "lock"
-        ) {
-            value(
-                uuid,
-                modified,
-                if (lock) currentTimeMillis() else 0
-            )
-        }
-        blobTable.insert(dataSource, "uuid", "data") {
-            value(uuid, data)
+        transaction {
+            prepareStatement(
+                """
+                INSERT INTO dolphin_advancement (uuid, modified, `lock`)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                  modified = VALUES(modified),
+                  `lock` = VALUES(`lock`)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, modified, if (lock) currentTimeMillis() else 0))
+                statement.executeUpdate()
+            }
+            prepareStatement(
+                """
+                INSERT INTO dolphin_advancement_blob (uuid, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, data))
+                statement.executeUpdate()
+            }
         }
     }
 
@@ -115,15 +71,27 @@ class TablePlayerAdvancement : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
-        blobTable.update(dataSource) {
-            where("uuid" eq uuid)
-            set("data", data)
-        }
-        table.update(dataSource) {
-            where("uuid" eq uuid)
-            set("modified", currentTimeMillis())
-            if (unlock) {
-                set("lock", 0)
+        val now = currentTimeMillis()
+        transaction {
+            prepareStatement(
+                """
+                INSERT INTO dolphin_advancement_blob (uuid, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, data))
+                statement.executeUpdate()
+            }
+            prepareStatement(
+                if (unlock) {
+                    "UPDATE dolphin_advancement SET modified = ?, `lock` = 0 WHERE uuid = ?"
+                } else {
+                    "UPDATE dolphin_advancement SET modified = ? WHERE uuid = ?"
+                }
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, uuid))
+                statement.executeUpdate()
             }
         }
     }
@@ -145,6 +113,7 @@ class TablePlayerAdvancement : SQLTable {
         return table.select(dataSource) {
             rows("modified")
             where("uuid" eq uuid)
+            limit(1)
         }.firstOrNull { getLong("modified") } ?: -1
     }
 
@@ -152,18 +121,18 @@ class TablePlayerAdvancement : SQLTable {
         uuid: String,
         nullWhenLocked: Boolean = true
     ): ByteArray? {
-        if (nullWhenLocked) {
-            val unlocked = table.find(dataSource) {
-                where("uuid" eq uuid)
-                where("lock" eq 0)
-            }
-            if (!unlocked) return null
-        }
-
-        return blobTable.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-        }.firstOrNull {
+        return executeQuery(
+            """
+            SELECT b.data
+            FROM dolphin_advancement d
+            JOIN dolphin_advancement_blob b ON b.uuid = d.uuid
+            WHERE d.uuid = ?
+              AND (? = 0 OR d.`lock` = 0)
+            LIMIT 1
+            """.trimIndent(),
+            uuid,
+            if (nullWhenLocked) 1 else 0
+        ) {
             getBytes("data")
         }
     }

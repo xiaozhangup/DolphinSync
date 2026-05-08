@@ -3,7 +3,6 @@ package me.xiaozhangup.dolphin.data.table
 import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
 import taboolib.module.database.*
-import java.sql.Connection
 import java.lang.System.currentTimeMillis
 
 class TablePlayerData : SQLTable {
@@ -44,60 +43,6 @@ class TablePlayerData : SQLTable {
         blobTable.createTable(dataSource)
     }
 
-    fun migrateLegacyDataToBlob(dropLegacyDataColumn: Boolean = false): Int {
-        return dataSource.connection.use { connection ->
-            if (!hasLegacyDataColumn(connection, "dolphin_data")) {
-                return@use 0
-            }
-
-            connection.autoCommit = false
-            try {
-                val migrated = connection.prepareStatement(
-                    """
-                    INSERT INTO dolphin_data_blob (uuid, data)
-                    SELECT uuid, data FROM dolphin_data
-                    WHERE data IS NOT NULL
-                    ON DUPLICATE KEY UPDATE data = VALUES(data)
-                    """.trimIndent()
-                ).use {
-                    it.executeUpdate()
-                }
-
-                if (dropLegacyDataColumn) {
-                    connection.createStatement().use {
-                        it.executeUpdate("ALTER TABLE dolphin_data DROP COLUMN data")
-                    }
-                }
-
-                connection.commit()
-                migrated
-            } catch (ex: Throwable) {
-                connection.rollback()
-                throw ex
-            } finally {
-                connection.autoCommit = true
-            }
-        }
-    }
-
-    private fun hasLegacyDataColumn(connection: Connection, tableName: String): Boolean {
-        return connection.prepareStatement(
-            """
-            SELECT 1
-            FROM information_schema.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = ?
-              AND COLUMN_NAME = 'data'
-            LIMIT 1
-            """.trimIndent()
-        ).use {
-            it.setString(1, tableName)
-            it.executeQuery().use { resultSet ->
-                resultSet.next()
-            }
-        }
-    }
-
     fun insert(
         uuid: String,
         name: String,
@@ -105,19 +50,30 @@ class TablePlayerData : SQLTable {
         lock: Boolean = false,
         data: ByteArray
     ) {
-        table.insert(
-            dataSource,
-            "uuid", "name", "modified", "lock"
-        ) {
-            value(
-                uuid,
-                name,
-                modified,
-                if (lock) currentTimeMillis() else 0
-            )
-        }
-        blobTable.insert(dataSource, "uuid", "data") {
-            value(uuid, data)
+        transaction {
+            prepareStatement(
+                """
+                INSERT INTO dolphin_data (uuid, name, modified, `lock`)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                  name = VALUES(name),
+                  modified = VALUES(modified),
+                  `lock` = VALUES(`lock`)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, name, modified, if (lock) currentTimeMillis() else 0))
+                statement.executeUpdate()
+            }
+            prepareStatement(
+                """
+                INSERT INTO dolphin_data_blob (uuid, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, data))
+                statement.executeUpdate()
+            }
         }
     }
 
@@ -130,15 +86,27 @@ class TablePlayerData : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
-        blobTable.update(dataSource) {
-            where("uuid" eq uuid)
-            set("data", data)
-        }
-        table.update(dataSource) {
-            where("uuid" eq uuid)
-            set("modified", currentTimeMillis())
-            if (unlock) {
-                set("lock", 0)
+        val now = currentTimeMillis()
+        transaction {
+            prepareStatement(
+                """
+                INSERT INTO dolphin_data_blob (uuid, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, data))
+                statement.executeUpdate()
+            }
+            prepareStatement(
+                if (unlock) {
+                    "UPDATE dolphin_data SET modified = ?, `lock` = 0 WHERE uuid = ?"
+                } else {
+                    "UPDATE dolphin_data SET modified = ? WHERE uuid = ?"
+                }
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, uuid))
+                statement.executeUpdate()
             }
         }
     }
@@ -149,18 +117,27 @@ class TablePlayerData : SQLTable {
         data: ByteArray,
         unlock: Boolean = false
     ) {
-        blobTable.update(dataSource) {
-            where("uuid" eq uuid)
-            set("data", data)
-        }
-        table.update(dataSource) {
-            where {
-                "uuid" eq uuid
+        val now = currentTimeMillis()
+        transaction {
+            prepareStatement(
+                """
+                INSERT INTO dolphin_data_blob (uuid, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(uuid, data))
+                statement.executeUpdate()
             }
-            set("modified", currentTimeMillis())
-            set("name", name)
-            if (unlock) {
-                set("lock", 0)
+            prepareStatement(
+                if (unlock) {
+                    "UPDATE dolphin_data SET modified = ?, name = ?, `lock` = 0 WHERE uuid = ?"
+                } else {
+                    "UPDATE dolphin_data SET modified = ?, name = ? WHERE uuid = ?"
+                }
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, name, uuid))
+                statement.executeUpdate()
             }
         }
     }
@@ -169,6 +146,7 @@ class TablePlayerData : SQLTable {
         return table.select(dataSource) {
             rows("lock")
             where("uuid" eq uuid)
+            limit(1)
         }.firstOrNull {
             getLong("lock") > 0
         } == true
@@ -184,6 +162,7 @@ class TablePlayerData : SQLTable {
         return table.select(dataSource) {
             rows("modified")
             where("uuid" eq uuid)
+            limit(1)
         }.firstOrNull { getLong("modified") } ?: -1
     }
 
@@ -191,18 +170,18 @@ class TablePlayerData : SQLTable {
         uuid: String,
         useLock: Boolean = true
     ): ByteArray? {
-        if (useLock) {
-            val unlocked = table.find(dataSource) {
-                where("uuid" eq uuid)
-                where("lock" eq 0)
-            }
-            if (!unlocked) return null
-        }
-
-        return blobTable.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-        }.firstOrNull {
+        return executeQuery(
+            """
+            SELECT b.data
+            FROM dolphin_data d
+            JOIN dolphin_data_blob b ON b.uuid = d.uuid
+            WHERE d.uuid = ?
+              AND (? = 0 OR d.`lock` = 0)
+            LIMIT 1
+            """.trimIndent(),
+            uuid,
+            if (useLock) 1 else 0
+        ) {
             getBytes("data")
         }
     }
@@ -212,19 +191,20 @@ class TablePlayerData : SQLTable {
         name: String,
         useLock: Boolean = true
     ): ByteArray? {
-        val exists = table.find(dataSource) {
-            where("uuid" eq uuid)
-            where("name" eq name)
-            if (useLock) {
-                where("lock" eq 0)
-            }
-        }
-        if (!exists) return null
-
-        return blobTable.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-        }.firstOrNull {
+        return executeQuery(
+            """
+            SELECT b.data
+            FROM dolphin_data d
+            JOIN dolphin_data_blob b ON b.uuid = d.uuid
+            WHERE d.uuid = ?
+              AND d.name = ?
+              AND (? = 0 OR d.`lock` = 0)
+            LIMIT 1
+            """.trimIndent(),
+            uuid,
+            name,
+            if (useLock) 1 else 0
+        ) {
             getBytes("data")
         }
     }
@@ -233,31 +213,31 @@ class TablePlayerData : SQLTable {
         uuid: String,
         useLock: Boolean = true
     ): ByteArray? {
-        var rowFound = false
-        val success = table.transaction(dataSource) {
-            select {
-                rows("uuid")
-                where("uuid" eq uuid)
-                if (useLock) {
-                    where("lock" eq 0)
+        return transaction {
+            val locked = prepareStatement(
+                """
+                UPDATE dolphin_data
+                SET `lock` = ?
+                WHERE uuid = ?
+                  AND (? = 0 OR `lock` = 0)
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(currentTimeMillis(), uuid, if (useLock) 1 else 0))
+                statement.executeUpdate()
+            }
+
+            if (locked == 0) {
+                null
+            } else {
+                prepareStatement(
+                    "SELECT data FROM dolphin_data_blob WHERE uuid = ? LIMIT 1"
+                ).use { statement ->
+                    statement.bind(arrayOf<Any?>(uuid))
+                    statement.executeQuery().use { resultSet ->
+                        if (resultSet.next()) resultSet.getBytes("data") else null
+                    }
                 }
-            }.firstOrNull {
-                rowFound = true
             }
-
-            update {
-                where("uuid" eq uuid)
-                set("lock", currentTimeMillis())
-            }
-        }.isSuccess
-
-        if (!success || !rowFound) return null
-
-        return blobTable.select(dataSource) {
-            rows("data")
-            where("uuid" eq uuid)
-        }.firstOrNull {
-            getBytes("data")
         }
     }
 
@@ -273,6 +253,7 @@ class TablePlayerData : SQLTable {
         return table.select(dataSource) {
             rows("name")
             where("uuid" eq uuid)
+            limit(1)
         }.firstOrNull {
             getString("name")
         }
@@ -282,6 +263,7 @@ class TablePlayerData : SQLTable {
         return table.select(dataSource) {
             rows("uuid")
             where("name" eq name)
+            limit(1)
         }.firstOrNull {
             getString("uuid")
         }

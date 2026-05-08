@@ -3,6 +3,7 @@ package me.xiaozhangup.dolphin.data.table
 import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
 import taboolib.module.database.*
+import java.sql.Statement
 
 class TableMapData : SQLTable {
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_map", DatabaseContainer.host) {
@@ -33,22 +34,26 @@ class TableMapData : SQLTable {
     fun insertMap(
         data: ByteArray = byteArrayOf()
     ) : Int {
-        var mapId = -1
-        table.insert(dataSource, "data") {
-            value(data)
-        }
-        table.select(dataSource) {
-            rows("map_id")
-            orderBy("map_id", Order.Type.DESC)
-            limit(1)
-        }.first {
-            mapId = getInt("map_id")
+        val mapId = dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                "INSERT INTO dolphin_map (data) VALUES (?)",
+                Statement.RETURN_GENERATED_KEYS
+            ).use { statement ->
+                statement.setBytes(1, data)
+                statement.executeUpdate()
+                statement.generatedKeys.use { keys ->
+                    if (keys.next()) {
+                        keys.getInt(1)
+                    } else {
+                        -1
+                    }
+                }
+            }
         }
 
         if (mapId == -1) {
             throw RuntimeException("Failed to insert map data")
         }
-
         return mapId
     }
 
@@ -56,20 +61,28 @@ class TableMapData : SQLTable {
         id: Int,
         data: ByteArray
     ) {
-        table.update(dataSource) {
-            where("map_id" eq id)
-            set("data", data)
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO dolphin_map (map_id, data)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE data = VALUES(data)
+                """.trimIndent()
+            ).use { statement ->
+                statement.setInt(1, id)
+                statement.setBytes(2, data)
+                statement.executeUpdate()
+            }
         }
     }
 
     fun getMap(id: Int) : ByteArray? {
-        val result = table.select(dataSource) {
+        return table.select(dataSource) {
             rows("data")
             where("map_id" eq id)
+            limit(1)
         }.firstOrNull {
             getBytes("data")
         }
-
-        return result
     }
 }

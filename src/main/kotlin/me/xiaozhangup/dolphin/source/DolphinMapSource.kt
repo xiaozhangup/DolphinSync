@@ -134,6 +134,6 @@ class DolphinMapSource : MapSource {
     }
 
     private companion object {
-        const val MAP_SAVE_INTERVAL_MILLIS = 50L
+        const val MAP_SAVE_INTERVAL_MILLIS = 500L
     }
 }

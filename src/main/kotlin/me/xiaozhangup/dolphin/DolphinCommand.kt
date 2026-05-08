@@ -1,8 +1,6 @@
 package me.xiaozhangup.dolphin
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
-import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerAdvancement
-import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerStatistic
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
 import me.xiaozhangup.dolphin.source.migrate.PlayerAchievementMigrate
 import me.xiaozhangup.dolphin.source.migrate.PlayerDataMigrate
@@ -22,6 +20,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 object DolphinCommand {
+
     @Awake(LifeCycle.ENABLE)
     fun regCommand() {
         command("dolphinsync", permissionDefault = PermissionDefault.OP, permission = "dolphinsync.admin") {
@@ -206,30 +205,6 @@ object DolphinCommand {
                         sender.notify("正在迁移玩家统计数据...")
                         submitScope {
                             PlayerStatisticMigrate.migrate(sender)
-                        }
-                    }
-                }
-
-                literal("table") {
-                    execute<CommandSender> { sender, _, _ ->
-                        sender.notify("正在迁移到新表数据...")
-                        submitScope {
-                            tablePlayerData.migrateLegacyDataToBlob()
-                            tablePlayerAdvancement.migrateLegacyDataToBlob()
-                            tablePlayerStatistic.migrateLegacyDataToBlob()
-                            sender.notify("迁移到新表数据完成!")
-                        }
-                    }
-
-                    literal("--delete") {
-                        execute<CommandSender> { sender, _, _ ->
-                            sender.notify("正在迁移到新表数据并删除旧列...")
-                            submitScope {
-                                tablePlayerData.migrateLegacyDataToBlob(true)
-                                tablePlayerAdvancement.migrateLegacyDataToBlob(true)
-                                tablePlayerStatistic.migrateLegacyDataToBlob(true)
-                                sender.notify("迁移到新表数据完成!")
-                            }
                         }
                     }
                 }

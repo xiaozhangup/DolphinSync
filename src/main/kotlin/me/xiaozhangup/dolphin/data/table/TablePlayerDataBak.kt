@@ -42,6 +42,7 @@ class TablePlayerDataBak : SQLTable {
                 "uuid" eq uuid
                 "modified" eq timestamp
             }
+            limit(1)
         }.firstOrNull {
             getBytes("data")
         }
