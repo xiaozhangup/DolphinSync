@@ -6,14 +6,17 @@ import me.xiaozhangup.dolphin.utils.obj.debug
 import me.xiaozhangup.dolphin.utils.obj.logger
 import me.xiaozhangup.dolphin.utils.obj.submitScope
 import me.xiaozhangup.octopus.MapSource
+import kotlinx.coroutines.delay
 import org.bukkit.Bukkit
 import taboolib.common.platform.function.submit
 import taboolib.common.platform.service.PlatformExecutor
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class DolphinMapSource : MapSource {
 
     private val debouncer = Debouncer(200)
+    private val mapSaveStates = ConcurrentHashMap<Int, MapSaveState>()
     private var worldSave: PlatformExecutor.PlatformTask? = null
     private val overworld by lazy {
         Bukkit.getWorld("world")!!
@@ -41,9 +44,77 @@ class DolphinMapSource : MapSource {
 
     override fun saveMapData(id: Int, data: ByteArray) {
         val rid = id + 1
+        val state: MapSaveState
+        val shouldStartWorker: Boolean
+        while (true) {
+            val currentState = mapSaveStates.computeIfAbsent(rid) { MapSaveState() }
+            val startWorker = synchronized(currentState) {
+                if (mapSaveStates[rid] !== currentState) {
+                    null
+                } else {
+                    currentState.pendingData = data
+                    if (currentState.workerRunning) {
+                        false
+                    } else {
+                        currentState.workerRunning = true
+                        true
+                    }
+                }
+            }
+            if (startWorker != null) {
+                state = currentState
+                shouldStartWorker = startWorker
+                break
+            }
+        }
+
+        if (!shouldStartWorker) {
+            return
+        }
+
         submitScope("map_$rid") {
-            tableMapData.saveMap(rid, data)
-            debug("[Sync] [Map] Saved map $id data, size: ${data.size}")
+            while (true) {
+                var dataToSave: ByteArray? = null
+                val waitMillis: Long
+                var shouldStop = false
+
+                synchronized(state) {
+                    val pendingData = state.pendingData
+                    val elapsedMillis = System.currentTimeMillis() - state.lastSaveMillis
+                    val remainingMillis = MAP_SAVE_INTERVAL_MILLIS - elapsedMillis
+                    if (pendingData == null) {
+                        if (remainingMillis > 0) {
+                            waitMillis = remainingMillis
+                        } else {
+                            state.workerRunning = false
+                            mapSaveStates.remove(rid, state)
+                            shouldStop = true
+                            waitMillis = 0
+                        }
+                    } else if (remainingMillis > 0) {
+                        waitMillis = remainingMillis
+                    } else {
+                        state.pendingData = null
+                        dataToSave = pendingData
+                        waitMillis = 0
+                    }
+                }
+
+                if (shouldStop) {
+                    return@submitScope
+                }
+                if (waitMillis > 0) {
+                    delay(waitMillis)
+                    continue
+                }
+
+                val snapshot = dataToSave?.copyOf() ?: continue
+                tableMapData.saveMap(rid, snapshot)
+                synchronized(state) {
+                    state.lastSaveMillis = System.currentTimeMillis()
+                }
+                debug("[Sync] [Map] Saved map $id data, size: ${snapshot.size}")
+            }
         }
     }
 
@@ -54,5 +125,15 @@ class DolphinMapSource : MapSource {
                 overworld.save()
             }
         }
+    }
+
+    private class MapSaveState {
+        var pendingData: ByteArray? = null
+        var lastSaveMillis: Long = 0
+        var workerRunning: Boolean = false
+    }
+
+    private companion object {
+        const val MAP_SAVE_INTERVAL_MILLIS = 50L
     }
 }
