@@ -2,26 +2,17 @@ package me.xiaozhangup.dolphin.source
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tableMapData
 import me.xiaozhangup.dolphin.message.MessageHandle
-import me.xiaozhangup.dolphin.utils.Debouncer
 import me.xiaozhangup.dolphin.utils.obj.debug
 import me.xiaozhangup.dolphin.utils.obj.logger
 import me.xiaozhangup.dolphin.utils.obj.submitScope
 import me.xiaozhangup.octopus.MapSource
 import kotlinx.coroutines.delay
-import org.bukkit.Bukkit
-import taboolib.common.platform.function.submit
-import taboolib.common.platform.service.PlatformExecutor
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class DolphinMapSource : MapSource {
 
-    private val debouncer = Debouncer(200)
     private val mapSaveStates = ConcurrentHashMap<Int, MapSaveState>()
-    private var worldSave: PlatformExecutor.PlatformTask? = null
-    private val overworld by lazy {
-        Bukkit.getWorld("world")!!
-    }
 
     init {
         logger("DolphinMapSource 已启用")
@@ -116,15 +107,6 @@ class DolphinMapSource : MapSource {
                     state.lastSaveMillis = System.currentTimeMillis()
                 }
                 debug("[Sync] [Map] Saved map $id data, size: ${snapshot.size}")
-            }
-        }
-    }
-
-    override fun setDirty(mapId: Int) {
-        debouncer.submit("map_$mapId") {
-            worldSave?.cancel()
-            worldSave = submit(delay = 10) {
-                overworld.save()
             }
         }
     }
