@@ -1,6 +1,7 @@
 package me.xiaozhangup.dolphin.source
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tableMapData
+import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.utils.Debouncer
 import me.xiaozhangup.dolphin.utils.obj.debug
 import me.xiaozhangup.dolphin.utils.obj.logger
@@ -110,6 +111,7 @@ class DolphinMapSource : MapSource {
 
                 val snapshot = dataToSave?.copyOf() ?: continue
                 tableMapData.saveMap(rid, snapshot)
+                MessageHandle.publishMap(id)
                 synchronized(state) {
                     state.lastSaveMillis = System.currentTimeMillis()
                 }
