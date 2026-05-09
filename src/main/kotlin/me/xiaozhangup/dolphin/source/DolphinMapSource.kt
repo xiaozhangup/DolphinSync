@@ -9,6 +9,7 @@ import me.xiaozhangup.octopus.MapSource
 import kotlinx.coroutines.delay
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
 class DolphinMapSource : MapSource {
 
@@ -96,7 +97,7 @@ class DolphinMapSource : MapSource {
                     return@submitScope
                 }
                 if (waitMillis > 0) {
-                    delay(waitMillis)
+                    delay(waitMillis.milliseconds)
                     continue
                 }
 
