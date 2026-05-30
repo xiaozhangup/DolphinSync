@@ -84,6 +84,7 @@ class DolphinDataSource : ProfileSource {
         val future = futureQueues.getOrPut(uuid) {
             CompletableFuture<ByteArray>().apply {
                 thenAccept {
+                    tablePlayerData.lockData(uuid) // 确保任意完成路径（含 Redis）都加锁
                     debug("[Sync] [Data] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
                 }
             }

@@ -142,6 +142,13 @@ class TablePlayerData : SQLTable {
         }
     }
 
+    fun lockData(uuid: String) {
+        table.update(dataSource) {
+            where("uuid" eq uuid)
+            set("lock", currentTimeMillis())
+        }
+    }
+
     fun isLocked(uuid: String): Boolean {
         return table.select(dataSource) {
             rows("lock")
