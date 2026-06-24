@@ -32,23 +32,37 @@ class DolphinDataSource : ProfileSource {
         val timer = PopTimer()
         val uuid = player.uniqueId.toString()
         val connected = player.clientConnected()
+        val session = sessions[uuid]
         debug("[Sync] [Data] Saving for ${player.name}... (Connected: $connected)")
+
+        if (session == null) {
+            debug("[Sync] [Data] Ignored save for ${player.name}: no active session")
+            return false
+        }
 
         if (connected) {
             submitScope("data_${player.uniqueId}") {
-                tablePlayerData.saveData(uuid, byte)
-                debug("[Sync] [Data] Saved for ${player.name} (in ${timer.pop()}ms)")
+                if (tablePlayerData.saveData(uuid, byte, session)) {
+                    debug("[Sync] [Data] Saved for ${player.name} (in ${timer.pop()}ms)")
+                } else {
+                    debug("[Sync] [Data] Ignored stale save for ${player.name} (session $session)")
+                }
             }
         } else {
-            MessageHandle.cacheData("data", uuid, byte)
+            MessageHandle.cachePlayerData(uuid, session, byte)
             MessageHandle.publish("data", uuid)
             debug("[Sync] [Data] Published message for ${player.name} (in ${timer.pop()}ms)")
 
             submitScope("data_${player.uniqueId}") {
-                tablePlayerData.saveData(uuid, player.name, byte, true)
-                debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
+                val saved = tablePlayerData.saveData(uuid, player.name, byte, session, true)
+                if (saved) {
+                    debug("[Sync] [Data] Saved and unlocked for ${player.name} (in ${timer.pop()}ms)")
+                } else {
+                    debug("[Sync] [Data] Ignored stale quit save for ${player.name} (session $session)")
+                }
+                sessions.remove(uuid, session)
 
-                if (DolphinSync.settings.backup) {
+                if (saved && DolphinSync.settings.backup) {
                     tablePlayerDataBak.insert(uuid, byte) // 备份
                     debug("[Sync] [Data] Backup saved for ${player.name}")
 
@@ -66,14 +80,17 @@ class DolphinDataSource : ProfileSource {
     }
 
     override fun load(username: String, uuid: String): Optional<ByteArray> {
+        val session = UUID.randomUUID().toString()
         if (!tablePlayerData.hasData(uuid)) {
+            sessions[uuid] = session
             submitScope("data_${uuid}") {
                 tablePlayerData.insert(
                     uuid,
                     username,
                     currentTimeMillis(),
                     true,
-                    byteArrayOf()
+                    byteArrayOf(),
+                    session
                 )
             }
             return Optional.empty()
@@ -81,32 +98,40 @@ class DolphinDataSource : ProfileSource {
 
         val timer = PopTimer()
         var tried = 0
-        val future = futureQueues.getOrPut(uuid) {
-            CompletableFuture<ByteArray>().apply {
-                thenAccept {
-                    tablePlayerData.lockData(uuid) // 确保任意完成路径（含 Redis）都加锁
-                    debug("[Sync] [Data] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
+        val pending = futureQueues.getOrPut(uuid) {
+            PendingLoad(
+                username,
+                session,
+                CompletableFuture<LoadResult>().apply {
+                    thenAccept {
+                        sessions[uuid] = it.session
+                        debug("[Sync] [Data] $uuid loaded (in ${timer.pop()}ms)") // 统计数据
+                    }
                 }
-            }
+            )
         } // 加上或者复用对应任务
+        tryCompleteFromRedis(uuid, pending)
 
         submitScope(tag = "data_${uuid}", period = 4) {
-            if (future.isDone) {
+            if (pending.future.isDone) {
                 debug("[Sync] [Data] $uuid loaded in another way (tried $tried times)")
                 cancel()
                 return@submitScope
             }
             if (tried > DolphinSync.settings.maxTried) { // 限制重试次数
-                future.complete(
-                    tablePlayerData.getDataAndLock(uuid, false) // 强制读取
+                pending.future.complete(
+                    LoadResult(
+                        tablePlayerData.getDataAndLock(uuid, pending.session, false) ?: byteArrayOf(), // 强制读取
+                        pending.session
+                    )
                 )
                 cancel()
                 return@submitScope
             }
 
-            val data = tablePlayerData.getDataAndLock(uuid) // 尝试读取
+            val data = tablePlayerData.getDataAndLock(uuid, pending.session) // 尝试读取
             if (data != null) { // 非空就完成处理
-                future.complete(data)
+                pending.future.complete(LoadResult(data, pending.session))
                 debug("[Sync] [Data] $uuid loaded (tried $tried times)")
                 cancel()
                 return@submitScope
@@ -115,16 +140,46 @@ class DolphinDataSource : ProfileSource {
             }
         }
 
-        val bytes = future.get()
-        return if (bytes.isEmpty()) {
+        val result = pending.future.get()
+        return if (result.data.isEmpty()) {
             Optional.empty()
         } else {
-            Optional.of(bytes)
+            Optional.of(result.data)
         }
     }
 
     companion object : Listener {
-        private val futureQueues = ConcurrentHashMap<String, CompletableFuture<ByteArray>>()
+        private data class LoadResult(
+            val data: ByteArray,
+            val session: String
+        ) {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as LoadResult
+
+                if (!data.contentEquals(other.data)) return false
+                if (session != other.session) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = data.contentHashCode()
+                result = 31 * result + session.hashCode()
+                return result
+            }
+        }
+
+        private data class PendingLoad(
+            val username: String,
+            val session: String,
+            val future: CompletableFuture<LoadResult>
+        )
+
+        private val sessions = ConcurrentHashMap<String, String>()
+        private val futureQueues = ConcurrentHashMap<String, PendingLoad>()
 
         @EventHandler
         fun e(e: PlayerQuitEvent) {
@@ -142,19 +197,22 @@ class DolphinDataSource : ProfileSource {
         }
 
         fun completeIfNeeded(uuid: String) {
-            val future = futureQueues[uuid] ?: return
-            val cached = MessageHandle.getAndInvalidateCache("data", uuid)
+            val pending = futureQueues[uuid] ?: return
+            tryCompleteFromRedis(uuid, pending)
+        }
+
+        private fun tryCompleteFromRedis(uuid: String, pending: PendingLoad) {
+            if (pending.future.isDone) return
+            val cached = MessageHandle.getAndInvalidatePlayerData(uuid)
             if (cached != null) {
-                future.complete(cached)
-                debug("[Sync] [Data] Data loaded from cache for $uuid (redis)")
-            } else {
-                val data = tablePlayerData.getData(uuid)
-                if (data != null) {
-                    future.complete(data)
-                    debug("[Sync] [Data] Data loaded from database for $uuid (redis)")
+                if (tablePlayerData.handoffData(uuid, pending.username, cached.session, pending.session, cached.data)) {
+                    pending.future.complete(LoadResult(cached.data, pending.session))
+                    debug("[Sync] [Data] Data loaded from cache for $uuid (redis handoff)")
                 } else {
-                    debug("[Sync] [Data] No data loaded from cache for $uuid (redis)")
+                    debug("[Sync] [Data] Ignored stale redis data for $uuid (session ${cached.session})")
                 }
+            } else {
+                debug("[Sync] [Data] No data loaded from cache for $uuid (redis)")
             }
         }
     }

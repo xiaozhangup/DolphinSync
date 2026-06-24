@@ -24,6 +24,10 @@ class TablePlayerData : SQLTable {
         add("lock") {
             type(ColumnTypeSQL.BIGINT)
         }
+
+        add("session") {
+            type(ColumnTypeSQL.VARCHAR, 36)
+        }
     }
 
     val blobTable: Table<Host<SQL>, SQL> = Table("dolphin_data_blob", DatabaseContainer.host) {
@@ -41,6 +45,20 @@ class TablePlayerData : SQLTable {
     override fun createTable() {
         table.createTable(dataSource)
         blobTable.createTable(dataSource)
+
+        try {
+            transaction {
+                prepareStatement(
+                    "ALTER TABLE dolphin_data ADD COLUMN `session` VARCHAR(36) NOT NULL DEFAULT ''"
+                ).use { statement ->
+                    statement.executeUpdate()
+                }
+            }
+        } catch (ex: java.sql.SQLException) {
+            if (ex.errorCode != 1060) {
+                throw ex
+            }
+        }
     }
 
     fun insert(
@@ -48,20 +66,22 @@ class TablePlayerData : SQLTable {
         name: String,
         modified: Long,
         lock: Boolean = false,
-        data: ByteArray
+        data: ByteArray,
+        session: String = ""
     ) {
         transaction {
             prepareStatement(
                 """
-                INSERT INTO dolphin_data (uuid, name, modified, `lock`)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO dolphin_data (uuid, name, modified, `lock`, `session`)
+                VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                   name = VALUES(name),
                   modified = VALUES(modified),
-                  `lock` = VALUES(`lock`)
+                  `lock` = VALUES(`lock`),
+                  `session` = VALUES(`session`)
                 """.trimIndent()
             ).use { statement ->
-                statement.bind(arrayOf<Any?>(uuid, name, modified, if (lock) currentTimeMillis() else 0))
+                statement.bind(arrayOf<Any?>(uuid, name, modified, if (lock) currentTimeMillis() else 0, session))
                 statement.executeUpdate()
             }
             prepareStatement(
@@ -73,6 +93,63 @@ class TablePlayerData : SQLTable {
             ).use { statement ->
                 statement.bind(arrayOf<Any?>(uuid, data))
                 statement.executeUpdate()
+            }
+        }
+    }
+
+    fun saveData(
+        uuid: String,
+        data: ByteArray,
+        session: String,
+        unlock: Boolean = false
+    ): Boolean {
+        val now = currentTimeMillis()
+        return transaction {
+            val updated = prepareStatement(
+                if (unlock) {
+                    "UPDATE dolphin_data SET modified = ?, `lock` = 0 WHERE uuid = ? AND `session` = ?"
+                } else {
+                    "UPDATE dolphin_data SET modified = ? WHERE uuid = ? AND `session` = ?"
+                }
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, uuid, session))
+                statement.executeUpdate()
+            }
+
+            if (updated == 0) {
+                false
+            } else {
+                upsertBlob(uuid, data)
+                true
+            }
+        }
+    }
+
+    fun saveData(
+        uuid: String,
+        name: String,
+        data: ByteArray,
+        session: String,
+        unlock: Boolean = false
+    ): Boolean {
+        val now = currentTimeMillis()
+        return transaction {
+            val updated = prepareStatement(
+                if (unlock) {
+                    "UPDATE dolphin_data SET modified = ?, name = ?, `lock` = 0 WHERE uuid = ? AND `session` = ?"
+                } else {
+                    "UPDATE dolphin_data SET modified = ?, name = ? WHERE uuid = ? AND `session` = ?"
+                }
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, name, uuid, session))
+                statement.executeUpdate()
+            }
+
+            if (updated == 0) {
+                false
+            } else {
+                upsertBlob(uuid, data)
+                true
             }
         }
     }
@@ -218,18 +295,19 @@ class TablePlayerData : SQLTable {
 
     fun getDataAndLock(
         uuid: String,
+        session: String,
         useLock: Boolean = true
     ): ByteArray? {
         return transaction {
             val locked = prepareStatement(
                 """
                 UPDATE dolphin_data
-                SET `lock` = ?
+                SET `lock` = ?, `session` = ?
                 WHERE uuid = ?
                   AND (? = 0 OR `lock` = 0)
                 """.trimIndent()
             ).use { statement ->
-                statement.bind(arrayOf<Any?>(currentTimeMillis(), uuid, if (useLock) 1 else 0))
+                statement.bind(arrayOf<Any?>(currentTimeMillis(), session, uuid, if (useLock) 1 else 0))
                 statement.executeUpdate()
             }
 
@@ -245,6 +323,49 @@ class TablePlayerData : SQLTable {
                     }
                 }
             }
+        }
+    }
+
+    fun handoffData(
+        uuid: String,
+        name: String,
+        fromSession: String,
+        toSession: String,
+        data: ByteArray
+    ): Boolean {
+        val now = currentTimeMillis()
+        return transaction {
+            val updated = prepareStatement(
+                """
+                UPDATE dolphin_data
+                SET modified = ?, name = ?, `lock` = ?, `session` = ?
+                WHERE uuid = ?
+                  AND `session` = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.bind(arrayOf<Any?>(now, name, currentTimeMillis(), toSession, uuid, fromSession))
+                statement.executeUpdate()
+            }
+
+            if (updated == 0) {
+                false
+            } else {
+                upsertBlob(uuid, data)
+                true
+            }
+        }
+    }
+
+    private fun java.sql.Connection.upsertBlob(uuid: String, data: ByteArray) {
+        prepareStatement(
+            """
+            INSERT INTO dolphin_data_blob (uuid, data)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE data = VALUES(data)
+            """.trimIndent()
+        ).use { statement ->
+            statement.bind(arrayOf<Any?>(uuid, data))
+            statement.executeUpdate()
         }
     }
 
