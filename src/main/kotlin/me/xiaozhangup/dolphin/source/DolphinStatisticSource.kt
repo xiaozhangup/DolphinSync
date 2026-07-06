@@ -1,5 +1,6 @@
 package me.xiaozhangup.dolphin.source
 
+import me.xiaozhangup.dolphin.DolphinSettings
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerStatistic
 import me.xiaozhangup.dolphin.message.MessageHandle
@@ -25,6 +26,9 @@ class DolphinStatisticSource : JsonDataSource {
     }
 
     override fun save(json: String, uuid: String) {
+        if (DolphinSync.settings.lifecycle != DolphinSettings.Lifecycle.RUNNING) {
+            return
+        }
         val timer = PopTimer()
         submitScope("static_$uuid") {
             if (quitedPlayers.remove(uuid)) { // 为主动退出

@@ -1,5 +1,6 @@
 package me.xiaozhangup.dolphin.source
 
+import me.xiaozhangup.dolphin.DolphinSettings
 import me.xiaozhangup.dolphin.DolphinSync
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerData
 import me.xiaozhangup.dolphin.data.DatabaseContainer.tablePlayerDataBak
@@ -29,6 +30,9 @@ class DolphinDataSource : ProfileSource {
     }
 
     override fun save(player: Player, byte: ByteArray): Boolean {
+        if (DolphinSync.settings.lifecycle != DolphinSettings.Lifecycle.RUNNING) {
+            return false
+        }
         val timer = PopTimer()
         val uuid = player.uniqueId.toString()
         val connected = player.clientConnected()

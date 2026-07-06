@@ -76,5 +76,6 @@ object DolphinSync : Plugin() {
             info("[Sync] World map data saved!")
         }
         CoroutineTask.shutdown()
+        settings.lifecycle = DolphinSettings.Lifecycle.STOPPED
     }
 }

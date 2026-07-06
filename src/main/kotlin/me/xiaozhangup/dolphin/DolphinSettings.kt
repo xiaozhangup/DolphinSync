@@ -12,6 +12,8 @@ data class DolphinSettings(
     val maxTried: Int,
     val backup: Boolean
 ) {
+    var lifecycle: Lifecycle = Lifecycle.RUNNING
+
     constructor(config: ConfigurationSection) : this(
         config.getBoolean("debug", false),
         config.getBoolean("sync.data", false),
@@ -25,5 +27,10 @@ data class DolphinSettings(
 
     override fun toString(): String {
         return "(debug=$debug, syncData=$syncData, syncMap=$syncMap, syncAchievement=$syncAchievement, syncStatistic=$syncStatistic, kickWhenShutdown=$kickWhenShutdown, maxTried=$maxTried, backup=$backup)"
+    }
+
+    enum class Lifecycle {
+        RUNNING,
+        STOPPED
     }
 }
