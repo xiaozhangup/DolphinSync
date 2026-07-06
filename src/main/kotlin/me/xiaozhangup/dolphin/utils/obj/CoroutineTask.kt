@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 object CoroutineTask {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val tagMutexes = ConcurrentHashMap<String, TagMutexInfo>()
+    private val jobs = ConcurrentHashMap<Job, Boolean>()
 
     @Volatile
     private var forceSync = false
@@ -21,7 +22,7 @@ object CoroutineTask {
         period: Long = 0L,
         block: suspend TaskScope.() -> Unit
     ): Job {
-        return scope.launch {
+        val job = scope.launch {
             val mi = acquireTagMutex(tag)
             try {
                 mi.mutex.withLock {
@@ -43,6 +44,17 @@ object CoroutineTask {
                 releaseTagMutex(tag)
             }
         }
+        jobs[job] = period == 0L
+        job.invokeOnCompletion { jobs.remove(job) }
+        return job
+    }
+
+    fun shutdown() = runBlocking {
+        forceSync = true
+        val snapshot = jobs.keys.toList()
+        snapshot.filter { jobs[it] == false }.forEach { it.cancel() }
+        snapshot.filter { jobs[it] == true }.joinAll()
+        scope.cancel()
     }
 
     private fun acquireTagMutex(tag: String): TagMutexInfo {
@@ -75,7 +87,10 @@ fun submitScope(
     period: Long = 0L,
     block: suspend TaskScope.() -> Unit
 ): Job {
+    if (CoroutineTask.isForceSync()) {
+        runBlocking { block(TaskScope(coroutineContext[Job]!!)) }
+        return Job().apply { complete() }
+    }
     val job = CoroutineTask.submit(tag, period * 50, block)
-    if (CoroutineTask.isForceSync()) runBlocking { job.join() }
     return job
 }

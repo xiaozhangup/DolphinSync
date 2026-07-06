@@ -1,10 +1,12 @@
 import io.izzel.taboolib.gradle.*
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.27"
-    kotlin("jvm") version "2.1.21"
+    id("io.izzel.taboolib") version "2.0.38"
+    id("me.xiaozhangup.sftp-uploader") version "0.1.0"
+    kotlin("jvm") version "2.3.20"
 }
 
 taboolib {
@@ -22,8 +24,8 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.2.4-5902762"
-        coroutines = "1.10.2"
+        taboolib = "6.3.0-test-6-23-1"
+        coroutines = "1.11.0"
         skipKotlinRelocate = true
         skipKotlin = true
     }
@@ -45,12 +47,12 @@ repositories {
 }
 
 dependencies {
-    compileOnly("me.xiaozhangup.octopus:octopus-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("me.xiaozhangup.octopus:octopus-api:26.2-R0.1-SNAPSHOT")
     compileOnly("redis.clients:jedis:5.1.0")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 
-    taboo("plutoproject.adventurekt:core:2.1.1") {
+    taboo("plutoproject.adventurekt:core:v3.0.0-paper") {
         isTransitive = false
     }
 }
@@ -60,13 +62,24 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "21"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_25)
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+configure<JavaPluginExtension> {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+sftpUploader {
+    host.set("xiaozhangup@s1.dimc.cloud")
+    target.set("Minecraft")
+    jars.set(
+        listOf(
+            layout.buildDirectory.file("libs/DolphinSync-1.0.6.jar").get().asFile.absolutePath
+        )
+    )
 }

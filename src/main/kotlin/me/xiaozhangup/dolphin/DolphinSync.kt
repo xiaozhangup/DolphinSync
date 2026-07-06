@@ -75,5 +75,6 @@ object DolphinSync : Plugin() {
             Bukkit.getWorld("world")!!.save(true)
             info("[Sync] World map data saved!")
         }
+        CoroutineTask.shutdown()
     }
 }
