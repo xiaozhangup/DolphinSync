@@ -31,21 +31,36 @@ object DolphinSync : Plugin() {
         DatabaseContainer.initContainer()
         MessageHandle.initAlkaidRedis()
 
-        if (settings.syncData) {
-            Bukkit.getServer().setProfileSource(DolphinDataSource())
-            info("[Sync] Data Sync Enabled!")
+        // Player
+        val dataSource = if (settings.syncData) {
+            DolphinDataSource().also {
+                Bukkit.getServer().setProfileSource(it)
+                info("[Sync] Data Sync Enabled!")
+            }
+        } else null
+        val achievementSource = if (settings.syncAchievement) {
+            DolphinAchievementSource().also {
+                Bukkit.getServer().setAchievementsSource(it)
+                info("[Sync] Achievement Sync Enabled!")
+            }
+        } else null
+        val statisticSource = if (settings.syncStatistic) {
+            DolphinStatisticSource().also {
+                Bukkit.getServer().setStatsSource(it)
+                info("[Sync] Statistic Sync Enabled!")
+            }
+        } else null
+        if (dataSource != null || statisticSource != null || achievementSource != null) {
+            Bukkit.getPluginManager().registerEvents(
+                DolphinListener(dataSource, statisticSource, achievementSource),
+                plugin
+            )
         }
+
+        // Map
         if (settings.syncMap) {
             Bukkit.getServer().setMapSource(DolphinMapSource())
             info("[Sync] Map Sync Enabled!")
-        }
-        if (settings.syncAchievement) {
-            Bukkit.getServer().setAchievementsSource(DolphinAchievementSource())
-            info("[Sync] Achievement Sync Enabled!")
-        }
-        if (settings.syncStatistic) {
-            Bukkit.getServer().setStatsSource(DolphinStatisticSource())
-            info("[Sync] Statistic Sync Enabled!")
         }
     }
 

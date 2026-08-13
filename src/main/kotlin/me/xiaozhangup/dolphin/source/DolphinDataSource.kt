@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class DolphinDataSource : ProfileSource {
 
+    private val prefetchedData = ConcurrentHashMap<String, Optional<ByteArray>>()
+
     init {
         Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
         logger("DolphinDataSource 已启用")
@@ -84,6 +86,24 @@ class DolphinDataSource : ProfileSource {
     }
 
     override fun load(username: String, uuid: String): Optional<ByteArray> {
+        prefetchedData[uuid]?.let { return copy(it) }
+        return loadFromSource(username, uuid)
+    }
+
+    fun prefetch(username: String, uuid: String) {
+        prefetchedData.remove(uuid)
+        prefetchedData[uuid] = copy(loadFromSource(username, uuid))
+    }
+
+    fun clearPrefetch(uuid: String) {
+        prefetchedData.remove(uuid)
+    }
+
+    private fun copy(data: Optional<ByteArray>): Optional<ByteArray> {
+        return data.map(ByteArray::clone)
+    }
+
+    private fun loadFromSource(username: String, uuid: String): Optional<ByteArray> {
         val session = UUID.randomUUID().toString()
         if (!tablePlayerData.hasData(uuid)) {
             sessions[uuid] = session
@@ -116,7 +136,7 @@ class DolphinDataSource : ProfileSource {
         } // 加上或者复用对应任务
         tryCompleteFromRedis(uuid, pending)
 
-        submitScope(tag = "data_${uuid}", period = 4) {
+        val job = submitScope(tag = "data_${uuid}", period = 4) {
             if (pending.future.isDone) {
                 debug("[Sync] [Data] $uuid loaded in another way (tried $tried times)")
                 cancel()
@@ -142,6 +162,9 @@ class DolphinDataSource : ProfileSource {
             } else {
                 tried++ // 否则累计等待下次
             }
+        }
+        job.invokeOnCompletion { cause ->
+            if (cause != null) pending.future.completeExceptionally(cause)
         }
 
         val result = pending.future.get()
@@ -196,8 +219,10 @@ class DolphinDataSource : ProfileSource {
         fun e(e: PlayerJoinEvent) {
             val player = e.player
             val uuid = player.uniqueId.toString()
-            MessageHandle.invalidateCache("data", uuid)
             futureQueues.remove(uuid)
+            submitScope("data_$uuid") {
+                MessageHandle.invalidateCache("data", uuid)
+            }
         }
 
         fun completeIfNeeded(uuid: String) {

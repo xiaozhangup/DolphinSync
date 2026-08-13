@@ -15,10 +15,13 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
 import java.lang.System.currentTimeMillis
+import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 class DolphinAchievementSource : JsonDataSource {
+
+    private val prefetchedData = ConcurrentHashMap<String, Optional<String>>()
 
     init {
         Bukkit.getPluginManager().registerEvents(Companion, DolphinSync.plugin)
@@ -46,6 +49,20 @@ class DolphinAchievementSource : JsonDataSource {
     }
 
     override fun load(uuid: String): String? {
+        prefetchedData[uuid]?.let { return it.orElse(null) }
+        return loadFromSource(uuid)
+    }
+
+    fun prefetch(uuid: String) {
+        prefetchedData.remove(uuid)
+        prefetchedData[uuid] = Optional.ofNullable(loadFromSource(uuid))
+    }
+
+    fun clearPrefetch(uuid: String) {
+        prefetchedData.remove(uuid)
+    }
+
+    private fun loadFromSource(uuid: String): String? {
         if (!tablePlayerAdvancement.hasData(uuid)) { // 如果没数据，直接返回空同时插入一个空
             submitScope("adv_$uuid") {
                 tablePlayerAdvancement.insert(
@@ -69,7 +86,7 @@ class DolphinAchievementSource : JsonDataSource {
             futureQueues[uuid] = this
         } // 加上对应任务
 
-        submitScope(tag = "adv_$uuid", period = 5) {
+        val job = submitScope(tag = "adv_$uuid", period = 5) {
             if (future.isDone) {
                 debug("[Sync] [Advancement] $uuid loaded in another way (tried $tried times)")
                 cancel()
@@ -92,6 +109,9 @@ class DolphinAchievementSource : JsonDataSource {
             } else {
                 tried++ // 否则累计等待下次
             }
+        }
+        job.invokeOnCompletion { cause ->
+            if (cause != null) future.completeExceptionally(cause)
         }
 
         return CompressUtils.decompress(future.get()) // 阻塞式获取
