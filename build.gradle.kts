@@ -79,7 +79,7 @@ sftpUploader {
     target.set("Minecraft")
     jars.set(
         listOf(
-            layout.buildDirectory.file("libs/DolphinSync-1.0.6.jar").get().asFile.absolutePath
+            layout.buildDirectory.file("libs/DolphinSync-1.0.7.jar").get().asFile.absolutePath
         )
     )
 }
