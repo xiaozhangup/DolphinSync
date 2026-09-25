@@ -9,7 +9,7 @@ import plutoproject.adventurekt.text.style.textDarkGray
 import plutoproject.adventurekt.text.text
 import plutoproject.adventurekt.text.with
 import me.xiaozhangup.dolphin.utils.ext.info
-import me.xiaozhangup.carbkotlin.common.util.replaceWithOrder
+import me.xiaozhangup.crab.common.util.replaceWithOrder
 
 fun CommandSender.notify(message: String, vararg placeholder: Any) {
     sendMessage(

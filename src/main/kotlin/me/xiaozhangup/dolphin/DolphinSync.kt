@@ -2,9 +2,9 @@ package me.xiaozhangup.dolphin
 
 
 import me.xiaozhangup.dolphin.utils.ext.getDataFolder
-import me.xiaozhangup.carbkotlin.lifecycle.Awake
-import me.xiaozhangup.carbkotlin.lifecycle.LifeCycle
-import me.xiaozhangup.carbkotlin.Crab
+import me.xiaozhangup.crab.lifecycle.Awake
+import me.xiaozhangup.crab.lifecycle.LifeCycle
+import me.xiaozhangup.crab.Crab
 import me.xiaozhangup.dolphin.data.DatabaseContainer
 import me.xiaozhangup.dolphin.message.MessageHandle
 import me.xiaozhangup.dolphin.source.DolphinAchievementSource
@@ -15,8 +15,8 @@ import me.xiaozhangup.dolphin.utils.obj.CoroutineTask
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import me.xiaozhangup.dolphin.utils.ext.info
-import me.xiaozhangup.carbkotlin.configuration.Config
-import me.xiaozhangup.carbkotlin.configuration.Configuration
+import me.xiaozhangup.crab.configuration.Config
+import me.xiaozhangup.crab.configuration.Configuration
 import java.lang.System.currentTimeMillis
 import java.util.concurrent.TimeUnit
 

@@ -7,9 +7,9 @@ import me.xiaozhangup.dolphin.data.table.TablePlayerData
 import me.xiaozhangup.dolphin.data.table.TablePlayerDataBak
 import me.xiaozhangup.dolphin.data.table.TablePlayerStatistic
 import me.xiaozhangup.dolphin.utils.obj.debug
-import me.xiaozhangup.carbkotlin.configuration.ConfigurationSection
-import me.xiaozhangup.carbkotlin.database.Database
-import me.xiaozhangup.carbkotlin.database.HostSQL
+import me.xiaozhangup.crab.configuration.ConfigurationSection
+import me.xiaozhangup.crab.database.Database
+import me.xiaozhangup.crab.database.HostSQL
 import javax.sql.DataSource
 
 object DatabaseContainer : Database("DolphinSync") {

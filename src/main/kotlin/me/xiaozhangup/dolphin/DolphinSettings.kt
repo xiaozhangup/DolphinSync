@@ -1,6 +1,6 @@
 package me.xiaozhangup.dolphin
 
-import me.xiaozhangup.carbkotlin.configuration.ConfigurationSection
+import me.xiaozhangup.crab.configuration.ConfigurationSection
 
 data class DolphinSettings(
     var debug: Boolean,

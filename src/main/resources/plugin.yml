@@ -2,5 +2,5 @@ name: DolphinSync
 main: me.xiaozhangup.dolphin.DolphinSync
 version: ${version}
 depend:
-  - 'CarbKotlin'
+  - 'CrabKotlin'
 api-version: 1.21.4

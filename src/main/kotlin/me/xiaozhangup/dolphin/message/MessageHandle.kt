@@ -7,7 +7,7 @@ import me.xiaozhangup.dolphin.source.DolphinStatisticSource
 import me.xiaozhangup.dolphin.utils.obj.debug
 import org.bukkit.Bukkit
 import me.xiaozhangup.dolphin.utils.ext.info
-import me.xiaozhangup.carbkotlin.redis.SingleRedisConnection
+import me.xiaozhangup.crab.redis.SingleRedisConnection
 import java.util.Base64
 import java.util.UUID
 
