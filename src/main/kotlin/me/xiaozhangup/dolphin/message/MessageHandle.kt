@@ -6,10 +6,8 @@ import me.xiaozhangup.dolphin.source.DolphinDataSource
 import me.xiaozhangup.dolphin.source.DolphinStatisticSource
 import me.xiaozhangup.dolphin.utils.obj.debug
 import org.bukkit.Bukkit
-import taboolib.common.platform.function.info
-import taboolib.expansion.AlkaidRedis
-import taboolib.expansion.SingleRedisConnector
-import taboolib.expansion.fromConfig
+import me.xiaozhangup.dolphin.utils.ext.info
+import me.xiaozhangup.carbkotlin.redis.SingleRedisConnection
 import java.util.Base64
 import java.util.UUID
 
@@ -42,14 +40,12 @@ object MessageHandle {
         }
     }
 
-    val redisConnection: SingleRedisConnector by lazy {
-        AlkaidRedis.create()
-            .fromConfig(DolphinSync.config.getConfigurationSection("redis")!!)
-            .connect()
+    val redisConnection: SingleRedisConnection by lazy {
+        DolphinSync.crab.redis(DolphinSync.config.getConfigurationSection("redis")!!)
     }
 
     fun initAlkaidRedis() {
-        val connection = redisConnection.connection()
+        val connection = redisConnection
         connection.subscribe(CHANNEL, patternMode = false) {
             debug("[AlkaidRedis] Redis received message: $message")
             val payload = message.split(':', limit = 2)
@@ -81,17 +77,17 @@ object MessageHandle {
     }
 
     fun publish(type: String, uuid: String) {
-        redisConnection.connection().publish(CHANNEL, "$type:$uuid")
+        redisConnection.publish(CHANNEL, "$type:$uuid")
     }
 
     fun publishMap(mapId: Int) {
-        redisConnection.connection().publish(CHANNEL, "map:$serverId:$mapId")
+        redisConnection.publish(CHANNEL, "map:$serverId:$mapId")
     }
 
     fun cacheData(type: String, uuid: String, data: ByteArray) {
         val key = "$CACHE_PREFIX:$type:$uuid"
         val encoded = Base64.getEncoder().encodeToString(data)
-        redisConnection.connection().eval(
+        redisConnection.eval(
             "return redis.call('setex', KEYS[1], ARGV[1], ARGV[2])",
             listOf(key),
             listOf(CACHE_TTL.toString(), encoded)
@@ -102,7 +98,7 @@ object MessageHandle {
     fun cachePlayerData(uuid: String, session: String, data: ByteArray) {
         val key = "$CACHE_PREFIX:data:$uuid"
         val encoded = "$session:${Base64.getEncoder().encodeToString(data)}"
-        redisConnection.connection().eval(
+        redisConnection.eval(
             "return redis.call('setex', KEYS[1], ARGV[1], ARGV[2])",
             listOf(key),
             listOf(CACHE_TTL.toString(), encoded)
@@ -112,7 +108,7 @@ object MessageHandle {
 
     fun invalidateCache(type: String, uuid: String): Boolean {
         val key = "$CACHE_PREFIX:$type:$uuid"
-        val deleted = (redisConnection.connection().eval(
+        val deleted = (redisConnection.eval(
             "return redis.call('del', KEYS[1])",
             listOf(key),
             emptyList()
@@ -126,7 +122,7 @@ object MessageHandle {
     }
 
     fun getAndInvalidateCache(type: String, uuid: String): ByteArray? {
-        val result = redisConnection.connection().eval(
+        val result = redisConnection.eval(
             "local v = redis.call('get', KEYS[1]); if v ~= false then redis.call('del', KEYS[1]) end; return v",
             listOf("$CACHE_PREFIX:$type:$uuid"),
             emptyList()
@@ -137,7 +133,7 @@ object MessageHandle {
     }
 
     fun getAndInvalidatePlayerData(uuid: String): CachedPlayerData? {
-        val result = redisConnection.connection().eval(
+        val result = redisConnection.eval(
             "local v = redis.call('get', KEYS[1]); if v ~= false then redis.call('del', KEYS[1]) end; return v",
             listOf("$CACHE_PREFIX:data:$uuid"),
             emptyList()

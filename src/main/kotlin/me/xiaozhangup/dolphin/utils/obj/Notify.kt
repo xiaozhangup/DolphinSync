@@ -8,8 +8,8 @@ import plutoproject.adventurekt.text.mini
 import plutoproject.adventurekt.text.style.textDarkGray
 import plutoproject.adventurekt.text.text
 import plutoproject.adventurekt.text.with
-import taboolib.common.platform.function.info
-import taboolib.common.util.replaceWithOrder
+import me.xiaozhangup.dolphin.utils.ext.info
+import me.xiaozhangup.carbkotlin.common.util.replaceWithOrder
 
 fun CommandSender.notify(message: String, vararg placeholder: Any) {
     sendMessage(

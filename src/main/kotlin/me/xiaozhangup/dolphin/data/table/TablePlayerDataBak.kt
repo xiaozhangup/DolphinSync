@@ -1,11 +1,10 @@
 package me.xiaozhangup.dolphin.data.table
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer
-import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
-import taboolib.module.database.*
+import me.xiaozhangup.carbkotlin.database.*
 import java.lang.System.currentTimeMillis
 
-class TablePlayerDataBak : SQLTable {
+class TablePlayerDataBak : SQLTable(DatabaseContainer.dataSource) {
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_data_bak", DatabaseContainer.host) {
         add("uuid") {
             type(ColumnTypeSQL.VARCHAR, 36) {

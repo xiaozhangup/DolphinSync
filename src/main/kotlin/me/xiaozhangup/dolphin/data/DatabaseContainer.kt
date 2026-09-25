@@ -1,25 +1,18 @@
 package me.xiaozhangup.dolphin.data
 
-import me.xiaozhangup.dolphin.DolphinSync.config
+import me.xiaozhangup.dolphin.DolphinSync.Companion.config
 import me.xiaozhangup.dolphin.data.table.TableMapData
 import me.xiaozhangup.dolphin.data.table.TablePlayerAdvancement
 import me.xiaozhangup.dolphin.data.table.TablePlayerData
 import me.xiaozhangup.dolphin.data.table.TablePlayerDataBak
 import me.xiaozhangup.dolphin.data.table.TablePlayerStatistic
 import me.xiaozhangup.dolphin.utils.obj.debug
-import taboolib.common.env.RuntimeDependencies
-import taboolib.common.env.RuntimeDependency
-import taboolib.library.configuration.ConfigurationSection
-import taboolib.module.database.HostSQL
+import me.xiaozhangup.carbkotlin.configuration.ConfigurationSection
+import me.xiaozhangup.carbkotlin.database.Database
+import me.xiaozhangup.carbkotlin.database.HostSQL
 import javax.sql.DataSource
 
-@RuntimeDependencies(
-    RuntimeDependency(
-        value = "mysql:mysql-connector-java:8.0.23",
-        test = "com.mysql.cj.jdbc.Driver"
-    )
-)
-object DatabaseContainer {
+object DatabaseContainer : Database("DolphinSync") {
     lateinit var host: HostSQL
         private set
     lateinit var dataSource: DataSource
@@ -46,8 +39,8 @@ object DatabaseContainer {
     }
 
     fun initContainer() {
-        host = HostSQL(databaseConfig)
-        dataSource = host.createDataSource()
+        host = HostSQL(databaseConfig.getValues(false))
+        dataSource = createDataSource(host)
 
         tablePlayerData = TablePlayerData().apply { createTable() }
         tablePlayerDataBak = TablePlayerDataBak().apply { createTable() }

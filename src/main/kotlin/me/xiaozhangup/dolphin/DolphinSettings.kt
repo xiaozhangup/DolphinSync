@@ -1,6 +1,6 @@
 package me.xiaozhangup.dolphin
 
-import taboolib.library.configuration.ConfigurationSection
+import me.xiaozhangup.carbkotlin.configuration.ConfigurationSection
 
 data class DolphinSettings(
     var debug: Boolean,

@@ -1,11 +1,10 @@
 package me.xiaozhangup.dolphin.data.table
 
 import me.xiaozhangup.dolphin.data.DatabaseContainer
-import me.xiaozhangup.dolphin.data.DatabaseContainer.dataSource
-import taboolib.module.database.*
+import me.xiaozhangup.carbkotlin.database.*
 import java.sql.Statement
 
-class TableMapData : SQLTable {
+class TableMapData : SQLTable(DatabaseContainer.dataSource) {
     override val table: Table<Host<SQL>, SQL> = Table("dolphin_map", DatabaseContainer.host) {
         add("map_id") {
             type(ColumnTypeSQL.INT) {

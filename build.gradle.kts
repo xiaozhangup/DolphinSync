@@ -1,43 +1,14 @@
-import io.izzel.taboolib.gradle.*
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.38"
+    id("com.gradleup.shadow") version "9.4.3"
     id("me.xiaozhangup.sftp-uploader") version "0.1.0"
     kotlin("jvm") version "2.3.20"
 }
 
-taboolib {
-    env {
-        // 安装模块
-        install(
-            Basic,
-            Bukkit,
-            BukkitHook,
-            BukkitUtil,
-            MinecraftChat,
-            CommandHelper,
-            AlkaidRedis,
-            Database
-        )
-    }
-    version {
-        taboolib = "6.3.0-test-6-23-1"
-        coroutines = "1.11.0"
-        skipKotlinRelocate = true
-        skipKotlin = true
-    }
 
-    description {
-        dependencies {
-            name("CarbKotlin")
-        }
-    }
-
-    relocate("plutoproject.adventurekt", "me.xiaozhangup.dolphin.lib.adventurekt")
-}
 
 repositories {
     mavenCentral()
@@ -47,12 +18,15 @@ repositories {
 }
 
 dependencies {
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    compileOnly("me.xiaozhangup.crab:CarbKotlin:2.3.20:paper") {
+        isTransitive = false
+    }
     compileOnly("me.xiaozhangup.octopus:octopus-api:26.2-R0.1-SNAPSHOT")
-    compileOnly("redis.clients:jedis:5.1.0")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 
-    taboo("plutoproject.adventurekt:core:v3.0.0-paper") {
+    compileOnly("plutoproject.adventurekt:core:v3.0.0") {
         isTransitive = false
     }
 }
@@ -82,4 +56,27 @@ sftpUploader {
             layout.buildDirectory.file("libs/DolphinSync-1.0.7.jar").get().asFile.absolutePath
         )
     )
+}
+
+// Native runtime and thin compile-time API.
+tasks.jar { archiveClassifier.set("plain") }
+tasks.shadowJar {
+    archiveClassifier.set("")
+    filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+    mergeServiceFiles()
+    exclude("META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin:.*:.*"))
+        exclude(dependency("org.jetbrains.kotlinx:.*:.*"))
+    }
+
+}
+val apiJar = tasks.register<Jar>("apiJar") {
+    archiveClassifier.set("api")
+    from(sourceSets.main.get().output) { exclude("plugin.yml") }
+}
+tasks.assemble { dependsOn(tasks.shadowJar, apiJar) }
+tasks.processResources {
+    inputs.property("version", project.version)
+    filesMatching("plugin.yml") { expand("version" to project.version) }
 }

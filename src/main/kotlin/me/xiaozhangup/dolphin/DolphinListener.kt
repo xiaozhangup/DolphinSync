@@ -13,7 +13,7 @@ import net.kyori.adventure.text.Component
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerJoinEvent
-import taboolib.common.platform.function.severe
+import me.xiaozhangup.dolphin.utils.ext.severe
 
 class DolphinListener(
     private val dataSource: DolphinDataSource?,
